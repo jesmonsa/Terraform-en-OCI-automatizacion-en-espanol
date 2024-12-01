@@ -1,0 +1,13 @@
+
+# Terraform
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+*.tfvars.json
+.terraform/
+.terraform.lock.hcl
+
+# Archivos de configuración de credenciales
+*.pem
+*.key
