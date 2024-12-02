@@ -2,7 +2,7 @@
 
 ## Despliegue de Servidores Web en Múltiples Dominios de Disponibilidad
 
-Este proyecto implementa una utilizando dos servidores web ubicados en diferentes Dominios de Disponibilidad (AD).
+Este proyecto implementa dos servidores web ubicados en diferentes Dominios de Disponibilidad (AD).
 
 ![](Dos_Servidores.png)
 
