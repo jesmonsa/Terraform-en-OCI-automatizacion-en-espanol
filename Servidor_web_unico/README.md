@@ -4,6 +4,8 @@
 
 Desplegaremos un conjunto básico de recursos en Oracle Cloud Infrastructure (OCI). El objetivo es crear un entorno simple que incluya un compartimento, una Red de Nube Virtual (VCN) y una subred pública regional. Dentro de esta subred, se desplegará una máquina virtual (VM) que funcionará como servidor web.
 
+![](Servidor unico.png)
+
 ### Recursos a Desplegar
 
 1. **Compartimento**: Un compartimento para organizar y gestionar los recursos.
