@@ -1,77 +1,75 @@
-# produccion Terraform OCI Course
+# Terraform en OCI
 
-## LESSON 2 - Second Webserver in other Availability Domain (AD)
+## Despliegue de Servidores Web en Múltiples Dominios de Disponibilidad
 
-In this lesson, we will add the second VM in another AD in the same VCN and regional subnet. Inside this new VM again *Null Provider* will be used to configure yet another webserver with the simple webpage content, but this time it will be showing content as follows: **Welcome to produccion.com! This is WEBSERVER2...**. After this lesson, you can use public IP addresses of both VMs to access two different web pages. Wouldn't it be great to have some load balancer on top of that and hide both web servers under the load balancer umbrella?
+Este proyecto implementa una utilizando dos servidores web ubicados en diferentes Dominios de Disponibilidad (AD).
 
-![](LESSON2_second_webserver_in_other_AD.jpg)
+![](Dos_Servidores.png)
 
-## Deploy Using Oracle Resource Manager
+### Recursos a Desplegar
 
-1. Click [![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?region=home&zipUrl=https://github.com/mlinxfeld/produccion_tf_oci_course/releases/latest/download/LESSON2_second_webserver_in_other_AD.zip)
+1. **Compartimento**: Organización lógica para todos los recursos del proyecto.
+2. **VCN (Virtual Cloud Network)**:
+   - Red virtual con CIDR personalizable
+   - Configuración de DNS automática
+   
+3. **Subred Pública Regional**:
+   - Abarca múltiples ADs
+   - Permite asignación de IPs públicas
+   - CIDR configurable
 
-    If you aren't already signed in, when prompted, enter the tenancy and user credentials.
+4. **Componentes de Red**:
+   - Internet Gateway para acceso público
+   - Tabla de rutas con ruta predeterminada al Internet Gateway
+   - Lista de seguridad con reglas para puertos 22 (SSH), 80 (HTTP), 443 (HTTPS)
 
-2. Review and accept the terms and conditions.
+5. **Servidores Web**:
+   - **Servidor Web 1** (AD1):
+     - Instancia de computación con IP pública
+     - Apache preinstalado
+     - Página web personalizada
+   
+   - **Servidor Web 2** (AD2):
+     - Instancia de computación con IP pública
+     - Apache preinstalado
+     - Página web personalizada
 
-3. Select the region where you want to deploy the stack.
+6. **Aprovisionamiento**:
+   - Instalación automática de Apache
+   - Configuración de firewall
+   - Despliegue de contenido web personalizado
 
-4. Follow the on-screen prompts and instructions to create the stack.
+### Despliegue Usando Oracle Resource Manager
 
-5. After creating the stack, click **Terraform Actions**, and select **Plan**.
+1. Haga clic en el siguiente botón para desplegar:
 
-6. Wait for the job to be completed, and review the plan.
+    [![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?region=home&zipUrl=https://github.com/nuevo-repo/produccion_tf_oci_course/releases/latest/download/LESSON2_second_webserver_in_other_AD.zip)
 
-    To make any changes, return to the Stack Details page, click **Edit Stack**, and make the required changes. Then, run the **Plan** action again.
+2. Proceso de Despliegue:
+   - Inicie sesión con sus credenciales de OCI
+   - Acepte los términos y condiciones
+   - Seleccione la región objetivo
+   - Complete la configuración del stack
 
-7. If no further changes are necessary, return to the Stack Details page, click **Terraform Actions**, and select **Apply**. 
+3. Ejecución:
+   - En la página del stack, seleccione "Terraform Actions"
+   - Ejecute "Plan" para revisar los cambios
+   - Si el plan es correcto, ejecute "Apply"
 
-## Deploy Using the Terraform CLI
+### Verificación del Despliegue
 
-### Clone of the repo
-Now, you'll want a local copy of this repo. You can make that with the commands:
+1. Acceda a la consola de OCI
+2. Verifique las instancias creadas en diferentes ADs
+3. Pruebe el acceso web a ambos servidores usando sus IPs públicas
 
-Clone the repo from github by executing the command as follows and then go to proper subdirectory:
+### Consideraciones de Producción
 
-```
-Martin-MacBook-Pro:~ martinlinxfeld$ git clone https://github.com/mlinxfeld/produccion_tf_oci_course.git
+- Considere agregar un balanceador de carga
+- Implemente monitoreo y alertas
+- Configure copias de seguridad
+- Establezca políticas de escalado
 
-Martin-MacBook-Pro:~ martinlinxfeld$ cd produccion_tf_oci_course/
+### Recursos Adicionales
 
-Martin-MacBook-Pro:produccion_tf_oci_course martinlinxfeld$ cd LESSON2_second_webserver_in_other_AD
-
-```
-
-### Prerequisites
-Create environment file with TF_VARs:
-
-```
-Martin-MacBook-Pro:LESSON2_second_webserver_in_other_AD martinlinxfeld$ vi setup_oci_tf_vars.sh
-
-export TF_VAR_user_ocid="ocid1.user.oc1..aaaaaaaaob4qbf2(...)uunizjie4his4vgh3jx5jxa"
-export TF_VAR_tenancy_ocid="ocid1.tenancy.oc1..aaaaaaaas(...)krj2s3gdbz7d2heqzzxn7pe64ksbia"
-export TF_VAR_compartment_ocid="ocid1.tenancy.oc1..aaaaaaaasbktyckn(...)ldkrj2s3gdbz7d2heqzzxn7pe64ksbia"
-export TF_VAR_fingerprint="00:f9:d1:41:bb:57(...)82:47:e6:00"
-export TF_VAR_private_key_path="/tmp/oci_api_key.pem"
-export TF_VAR_region="eu-frankfurt-1"
-
-Martin-MacBook-Pro:LESSON2_second_webserver_in_other_AD martinlinxfeld$ source setup_oci_tf_vars.sh
-```
-
-### Create the Resources
-Run the following commands:
-
-```
-Martin-MacBook-Pro:LESSON2_second_webserver_in_other_AD martinlinxfeld$ terraform init
-    
-Martin-MacBook-Pro:LESSON2_second_webserver_in_other_AD martinlinxfeld$ terraform plan
-
-Martin-MacBook-Pro:LESSON2_second_webserver_in_other_AD martinlinxfeld$ terraform apply
-```
-
-### Destroy the Deployment
-When you no longer need the deployment, you can run this command to destroy the resources:
-
-```
-Martin-MacBook-Pro:LESSON2_second_webserver_in_other_AD martinlinxfeld$ terraform destroy
-```
+- [Documentación de Terraform para OCI](https://registry.terraform.io/providers/oracle/oci/latest/docs)
+- [Documentación de Oracle Cloud Infrastructure](https://docs.oracle.com/iaas/Content/home.htm)
