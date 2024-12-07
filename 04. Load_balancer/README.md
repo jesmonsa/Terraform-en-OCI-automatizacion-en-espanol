@@ -14,7 +14,7 @@ Este proyecto implementa una infraestructura completa en Oracle Cloud Infrastruc
    - Configuración de DNS automática
 
 3. **Subred Pública Regional**:
-   - Abarca múltiples ADs
+   - Abarca múltiples FDs
    - Permite asignación de IPs públicas
    - CIDR configurable
 
