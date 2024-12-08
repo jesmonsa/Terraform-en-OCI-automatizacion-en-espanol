@@ -1,77 +1,82 @@
-# FoggyKitchen Terraform OCI Course
+# Terraform en OCI
 
-## LESSON 5 - Shared Filesystem 
+## Despliegue de Infraestructura en OCI
 
-In this lesson, we will modify the configuration a little bit. It means we will create the shared filesystem (*File Storage Mount Target*) which will be mounted as NFS over both Webservers (/sharedfs mount point). Into that share storage we will upload index.html file with new content: **Welcome to FoggyKitchen.com! These are both WEBSERVERS under LB umbrella with shared index.html ...**. Next *Null Resources* will modify /etc/httpd/conf/httpd.conf to include alias and directory of shared resource. Load Balancer will be modified as little bit as well. Now Backend Health Check will check URL /shared every 3000 ms. After successful *terraform apply* we should go to Web Browser and check URL: *http://public_ip_of_load_balancer/shared/*. 
+Este proyecto implementa una infraestructura completa en Oracle Cloud Infrastructure (OCI) utilizando Terraform.
 
-![](LESSON5_shared_filesystem.jpg)
+![](Shared_filesystem.png)
 
-## Deploy Using Oracle Resource Manager
+### Recursos a Desplegar
 
-1. Click [![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?region=home&zipUrl=https://github.com/mlinxfeld/foggykitchen_tf_oci_course/releases/latest/download/LESSON5_shared_filesystem.zip)
+1. **Compartimento**: Organización lógica para todos los recursos del proyecto.
+2. **VCN (Virtual Cloud Network)**:
+   - Red virtual con CIDR personalizable
+   - Configuración de DNS automática
 
-    If you aren't already signed in, when prompted, enter the tenancy and user credentials.
+3. **Subred Pública Regional**:
+   - Abarca múltiples FDs
+   - Permite asignación de IPs públicas
+   - CIDR configurable
 
-2. Review and accept the terms and conditions.
+4. **Componentes de Red**:
+   - Internet Gateway para acceso público
+   - NAT Gateway para acceso a internet desde subredes privadas
+   - Tabla de rutas con ruta predeterminada al Internet Gateway y NAT Gateway
+   - Lista de seguridad con reglas para puertos 22 (SSH), 80 (HTTP), 443 (HTTPS)
 
-3. Select the region where you want to deploy the stack.
+5. **Servidores Web**:
+   - **Servidor Web 1** (FD1):
+     - Instancia de computación con IP pública
+     - Apache preinstalado
+     - Página web personalizada
 
-4. Follow the on-screen prompts and instructions to create the stack.
+   - **Servidor Web 2** (FD2):
+     - Instancia de computación con IP pública
+     - Apache preinstalado
+     - Página web personalizada
 
-5. After creating the stack, click **Terraform Actions**, and select **Plan**.
+6. **Balanceador de Carga**:
+   - Balanceador de carga público
+   - Configuración flexible de ancho de banda
+   - Reglas de salud para backend
 
-6. Wait for the job to be completed, and review the plan.
+7. **Bastion Host**:
+   - Instancia de computación para acceso seguro a las instancias en subredes privadas
+   - Configuración de SSH
 
-    To make any changes, return to the Stack Details page, click **Edit Stack**, and make the required changes. Then, run the **Plan** action again.
+8. **File Storage (FSS)**:
+   - Sistema de archivos compartido para los servidores web
+   - Montaje automático en ambos servidores web
 
-7. If no further changes are necessary, return to the Stack Details page, click **Terraform Actions**, and select **Apply**. 
+9. **Aprovisionamiento**:
+    - Instalación automática de Apache
+    - Configuración de firewall
+    - Despliegue de contenido web personalizado
 
-## Deploy Using the Terraform CLI
+### Despliegue Usando Oracle Resource Manager
 
-### Clone of the repo
-Now, you'll want a local copy of this repo. You can make that with the commands:
+1. Haga clic en el siguiente botón para desplegar:
 
-Clone the repo from github by executing the command as follows and then go to proper subdirectory:
+    [![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?region=home&zipUrl=https://github.com/nuevo-repo/produccion_tf_oci_course/releases/latest/download/LESSON2_second_webserver_in_other_AD.zip)
 
-```
-Martin-MacBook-Pro:~ martinlinxfeld$ git clone https://github.com/mlinxfeld/foggykitchen_tf_oci_course.git
+2. Proceso de Despliegue:
+   - Inicie sesión con sus credenciales de OCI
+   - Acepte los términos y condiciones
+   - Seleccione la región objetivo
+   - Complete la configuración del stack
 
-Martin-MacBook-Pro:~ martinlinxfeld$ cd foggykitchen_tf_oci_course/
+3. Ejecución:
+   - En la página del stack, seleccione "Terraform Actions"
+   - Ejecute "Plan" para revisar los cambios
+   - Si el plan es correcto, ejecute "Apply"
 
-Martin-MacBook-Pro:foggykitchen_tf_oci_course martinlinxfeld$ cd LESSON5_shared_filesystem
+### Verificación del Despliegue
 
-```
+1. Acceda a la consola de OCI
+2. Verifique las instancias creadas en diferentes FDs
+3. Pruebe el acceso web a ambos servidores usando sus IPs públicas
 
-### Prerequisites
-Create environment file with TF_VARs:
+### Recursos Adicionales
 
-```
-Martin-MacBook-Pro:LESSON5_shared_filesystem martinlinxfeld$ vi setup_oci_tf_vars.sh
-
-export TF_VAR_user_ocid="ocid1.user.oc1..aaaaaaaaob4qbf2(...)uunizjie4his4vgh3jx5jxa"
-export TF_VAR_tenancy_ocid="ocid1.tenancy.oc1..aaaaaaaas(...)krj2s3gdbz7d2heqzzxn7pe64ksbia"
-export TF_VAR_compartment_ocid="ocid1.tenancy.oc1..aaaaaaaasbktyckn(...)ldkrj2s3gdbz7d2heqzzxn7pe64ksbia"
-export TF_VAR_fingerprint="00:f9:d1:41:bb:57(...)82:47:e6:00"
-export TF_VAR_private_key_path="/tmp/oci_api_key.pem"
-export TF_VAR_region="eu-amsterdam-1"
-
-Martin-MacBook-Pro:LESSON5_shared_filesystem martinlinxfeld$ source setup_oci_tf_vars.sh
-```
-
-### Create the Resources
-Run the following commands:
-
-```
-Martin-MacBook-Pro:LESSON5_shared_filesystem martinlinxfeld$ terraform init
-    
-Martin-MacBook-Pro:LESSON5_shared_filesystem martinlinxfeld$ terraform plan
-
-Martin-MacBook-Pro:LESSON5_shared_filesystem martinlinxfeld$ terraform apply
-```
-
-### Destroy the Deployment
-When you no longer need the deployment, you can run this command to destroy the resources:
-
-```
-Martin-MacBook-Pro:LESSON5_shared_filesystem martinlinxfeld$ terraform destroy
-```
+- [Documentación de Terraform para OCI](https://registry.terraform.io/providers/oracle/oci/latest/docs)
+- [Documentación de Oracle Cloud Infrastructure](https://docs.oracle.com/iaas/Content/home.htm)
