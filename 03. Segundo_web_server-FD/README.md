@@ -14,7 +14,7 @@ Este proyecto implementa dos servidores web ubicados en diferentes Fault Domains
    - Configuración de DNS automática
    
 3. **Subred Pública Regional**:
-   - Abarca múltiples ADs
+   - Abarca múltiples FDs
    - Permite asignación de IPs públicas
    - CIDR configurable
 
@@ -59,15 +59,8 @@ Este proyecto implementa dos servidores web ubicados en diferentes Fault Domains
 ### Verificación del Despliegue
 
 1. Acceda a la consola de OCI
-2. Verifique las instancias creadas en diferentes ADs
+2. Verifique las instancias creadas en diferentes FDs
 3. Pruebe el acceso web a ambos servidores usando sus IPs públicas
-
-### Consideraciones de Producción
-
-- Considere agregar un balanceador de carga
-- Implemente monitoreo y alertas
-- Configure copias de seguridad
-- Establezca políticas de escalado
 
 ### Recursos Adicionales
 

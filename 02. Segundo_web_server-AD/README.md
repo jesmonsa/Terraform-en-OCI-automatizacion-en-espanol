@@ -62,13 +62,6 @@ Este proyecto implementa dos servidores web ubicados en diferentes Dominios de D
 2. Verifique las instancias creadas en diferentes ADs
 3. Pruebe el acceso web a ambos servidores usando sus IPs públicas
 
-### Consideraciones de Producción
-
-- Considere agregar un balanceador de carga
-- Implemente monitoreo y alertas
-- Configure copias de seguridad
-- Establezca políticas de escalado
-
 ### Recursos Adicionales
 
 - [Documentación de Terraform para OCI](https://registry.terraform.io/providers/oracle/oci/latest/docs)
