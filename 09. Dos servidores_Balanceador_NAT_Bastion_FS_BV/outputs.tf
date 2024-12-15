@@ -7,13 +7,13 @@ output "FoggyKitchenBastionServer_PublicIP" {
 # Load Balancer Public IP
 output "FoggyKitchenPublicLoadBalancer_PublicIP" {
   description = "Public IP address of the Public Load Balancer"
-  value       = oci_load_balancer_load_balancer.FoggyKitchenPublicLoadBalancer.ip_addresses[0].ip_address
+  value       = oci_load_balancer_load_balancer.FoggyKitchenPublicLoadBalancer.ip_address
 }
 
 # Load Balancer URL
 output "FoggyKitchenPublicLoadBalancer_URL" {
   description = "URL to access the Public Load Balancer"
-  value       = "http://${oci_load_balancer_load_balancer.FoggyKitchenPublicLoadBalancer.ip_addresses[0].ip_address}/shared/"
+  value       = "http://${oci_load_balancer_load_balancer.FoggyKitchenPublicLoadBalancer.ip_address}/shared/"
 }
 
 # WebServer1 Private IP
@@ -63,9 +63,8 @@ output "FoggyKitchenLBSubnet_CIDR" {
 
 # Terraform State Metadata (for debugging)
 output "terraform_state_metadata" {
-  description = "Metadata about the Terraform state"
+  description = "Metadata about the Terraform workspace"
   value       = {
-    module_version = "${terraform.workspace}:${terraform.version}"
-    timestamp      = timestamp()
+    module_workspace = terraform.workspace
   }
 }
