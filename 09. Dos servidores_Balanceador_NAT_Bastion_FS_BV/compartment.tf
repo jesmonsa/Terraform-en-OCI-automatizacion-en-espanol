@@ -1,7 +1,7 @@
-resource "oci_identity_compartment" "produccionCompartment" {
+resource "oci_identity_compartment" "FoggyKitchenCompartment" {
   provider = oci.homeregion
-  name = "produccionCompartment"
-  description = "produccion Compartment"
+  name = "FoggyKitchenCompartment"
+  description = "FoggyKitchen Compartment"
   compartment_id = var.compartment_ocid
   
   provisioner "local-exec" {

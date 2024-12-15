@@ -1,21 +1,21 @@
 # Bastion Instance Public IP
-output "produccionBastionServer_PublicIP" {
-  value = [data.oci_core_vnic.produccionBastionServer_VNIC1.public_ip_address]
+output "FoggyKitchenBastionServer_PublicIP" {
+  value = [data.oci_core_vnic.FoggyKitchenBastionServer_VNIC1.public_ip_address]
 }
 
 # LoadBalancer URL
-output "produccionPublicLoadBalancer_URL" {
-  value = "http://${oci_load_balancer.produccionPublicLoadBalancer.ip_address_details[0].ip_address}/shared/"
+output "FoggyKitchenPublicLoadBalancer_URL" {
+  value = "http://${oci_load_balancer.FoggyKitchenPublicLoadBalancer.ip_address_details[0].ip_address}/shared/"
 }
 
 # WebServer1 Instance Private IP
-output "produccionWebserver1PrivateIP" {
-  value = [data.oci_core_vnic.produccionWebserver1_VNIC1.private_ip_address]
+output "FoggyKitchenWebserver1PrivateIP" {
+  value = [data.oci_core_vnic.FoggyKitchenWebserver1_VNIC1.private_ip_address]
 }
 
 # WebServer2 Instance Private IP
-output "produccionWebserver2PrivateIP" {
-  value = [data.oci_core_vnic.produccionWebserver2_VNIC1.private_ip_address]
+output "FoggyKitchenWebserver2PrivateIP" {
+  value = [data.oci_core_vnic.FoggyKitchenWebserver2_VNIC1.private_ip_address]
 }
 
 # Generated Private Key for WebServer Instance
