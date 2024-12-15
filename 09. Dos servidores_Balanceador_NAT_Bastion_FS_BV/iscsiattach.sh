@@ -7,72 +7,67 @@
 # 20 April 2017
 # Copyright Oracle, Inc.  All rights reserved.
 
-BASEADDR="169.254.2.2"
+BASEADDR="169.254.2.2"  # Asegúrate de que esta dirección IP sea la correcta.
+TIMEOUT=30              # Timeout explícito para evitar bloqueos en iscsiadm.
 
-# Set a base address incrementor so we can loop through all the
-# addresses.
+# Set a base address incrementor so we can loop through all the addresses.
 addrCount=0
 
-#while [ ${addrCount} -le 32 ]
+# Iterar sobre un rango de direcciones IP
 while [ ${addrCount} -le 1 ]
 do
+    # Generar la dirección actual
+    CURRADDR=`echo ${BASEADDR} | awk -F\. '{last=$4+'${addrCount}';print $1"."$2"."$3"."last}'`
 
-	CURRADDR=`echo ${BASEADDR} | awk -F\. '{last=$4+'${addrCount}';print $1"."$2"."$3"."last}'`
+    clear
+    echo "Intentando conexión a ${CURRADDR}"
 
-	clear
-	echo "Attempting connection to ${CURRADDR}"
+    # Crear el FIFO para discovery
+    mkfifo discpipe
 
-	mkfifo discpipe
-	# Find all the iSCSI Block Storage volumes attached to the instance but
-	# not configured for use on the instance.  Basically, get a list of the
-	# volumes that the instance can see, the loop through the ones it has,
-	# and add volumes not already configured on the instance.
-	#
-	# First get the list of volumes visible (attached) to the instance
+    # Realizar el discovery con timeout
+    timeout ${TIMEOUT} iscsiadm -m discovery -t st -p ${CURRADDR}:3260 | grep -v uefi | awk '{print $2}' > discpipe 2>/dev/null &
+    result=$?
 
-	iscsiadm -m discovery -t st -p ${CURRADDR}:3260 | grep -v uefi | awk '{print $2}' > discpipe 2> /dev/null &
+    # Manejo de error si no hay conexión
+    if [ ${result} -ne 0 ]; then
+        echo "Error: No se pudo conectar a ${CURRADDR} en el puerto 3260. Saltando a la siguiente dirección."
+        (( addrCount = addrCount + 1 ))
+        find . -maxdepth 1 -type p -exec rm {} \;  # Limpiar pipes
+        continue
+    fi
 
-	# If the result is non-zero, that generally means that there are no targets available or
-	# that the portal is reachable but not active.  We make no distinction between the two
-	# and simply skip ahead.
-	result=$?
-	if [ ${result} -ne 0 ]
-	then
-		(( addrCount = addrCount + 1 ))
-		continue
-	fi
-	 
-	# Loop through the list (via the named FIFO pipe below)
-	while read target
-	do
-	    mkfifo sesspipe
-	    # Get the list of the currently attached Block Storage volumes
-	    iscsiadm -m session -P 0 | grep -v uefi | awk '{print $4}' > sesspipe 2> /dev/null &
-	     
-	    # Set a flag, and loop through the sessions (attached, but not configured)
-	    # and see if the volumes match.  If so, skip to the next until we get
-	    # through the list.  Session list is via the pipe.
-	    found="false"
-	    while read session
-	    do
-		if [ ${target} = ${session} ]
-		then
-		    found="true"
-		    break
-		fi
-	    done < sesspipe
-	     
-	    # If the volume is not found, configure it.  Get the resulting device file.
-	    if [ ${found} = "false" ]
-	    then
-		iscsiadm -m node -o new -T ${target} -p ${CURRADDR}:3260
-		iscsiadm -m node -o update -T ${target} -n node.startup -v automatic
-		iscsiadm -m node -T ${target} -p ${CURRADDR}:3260 -l
-		sleep 10
-	    fi
-	done < discpipe
-	
-	(( addrCount = addrCount + 1 ))
-	find . -maxdepth 1 -type p -exec rm {} \;
+    # Iterar sobre los targets descubiertos
+    while read target
+    do
+        mkfifo sesspipe
+        timeout ${TIMEOUT} iscsiadm -m session -P 0 | grep -v uefi | awk '{print $4}' > sesspipe 2>/dev/null &
+        
+        # Verificar si el target ya está configurado
+        found="false"
+        while read session
+        do
+            if [ "${target}" = "${session}" ]; then
+                found="true"
+                break
+            fi
+        done < sesspipe
+
+        # Configurar el target si no está presente
+        if [ "${found}" = "false" ]; then
+            echo "Configurando target: ${target}"
+            iscsiadm -m node -o new -T ${target} -p ${CURRADDR}:3260
+            iscsiadm -m node -o update -T ${target} -n node.startup -v automatic
+            iscsiadm -m node -T ${target} -p ${CURRADDR}:3260 -l
+            sleep 10
+        else
+            echo "Target ${target} ya configurado. Saltando."
+        fi
+    done < discpipe
+
+    # Incrementar contador y limpiar pipes
+    (( addrCount = addrCount + 1 ))
+    find . -maxdepth 1 -type p -exec rm {} \;
 done
-echo "Scan Complete."
+
+echo "Escaneo completo."
