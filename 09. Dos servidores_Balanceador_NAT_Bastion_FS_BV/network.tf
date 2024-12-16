@@ -46,6 +46,25 @@ resource "oci_core_route_table" "FoggyKitchenRouteTableViaNAT" {
   }
 }
 
+# DHCP Options para la VCN
+resource "oci_core_dhcp_options" "FoggyKitchenDhcpOptions1" {
+  compartment_id = oci_identity_compartment.FoggyKitchenCompartment.id
+  vcn_id         = oci_core_virtual_network.FoggyKitchenVCN.id
+  display_name   = "FoggyKitchenDHCPOptions1"
+
+  # Opciones de búsqueda de dominio
+  options {
+    type = "DomainNameServer"
+    server_type = "VcnLocalPlusInternet"
+  }
+
+  # Opciones de nombre de dominio personalizado
+  options {
+    type = "SearchDomain"
+    search_domain_names = ["foggykitchen.vcn.oraclevcn.com"]
+  }
+}
+
 # Security List para Servidores Web
 resource "oci_core_security_list" "FoggyKitchenWebSecurityList" {
   compartment_id = oci_identity_compartment.FoggyKitchenCompartment.id
