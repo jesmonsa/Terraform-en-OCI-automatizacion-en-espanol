@@ -34,8 +34,8 @@ resource "oci_load_balancer_backendset" "FoggyKitchenPublicLoadBalancerBackendse
   health_checker {
     port                = "80"
     protocol            = "HTTP"
-    response_body_regex = ".*"
-    url_path            = "/sharedfs"
+    response_body_regex = ".*OK.*"
+    url_path            = "/sharedfs/health.html"
     interval_ms         = "10000"
     timeout_in_millis   = "3000"
     retries            = 3

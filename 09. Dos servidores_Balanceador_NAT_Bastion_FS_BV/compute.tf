@@ -75,14 +75,15 @@ resource "oci_core_instance" "FoggyKitchenWebserver1" {
       # Agregar configuración de directorio para /sharedfs
       cat >> /etc/httpd/conf/httpd.conf <<EOL
       <Directory "/sharedfs">
+          Options Indexes FollowSymLinks
           AllowOverride None
           Require all granted
       </Directory>
       EOL
       
-      # Crear archivo de prueba para health check
-      mkdir -p /sharedfs
-      echo "<html><body>Server is running</body></html>" > /sharedfs/index.html
+      # Crear archivos necesarios en el FSS
+      echo "<html><body>OK</body></html>" > /sharedfs/health.html
+      echo "<html><body>Welcome to the shared web server</body></html>" > /sharedfs/index.html
       
       # Ajustar permisos
       chown -R apache:apache /sharedfs
@@ -97,11 +98,22 @@ resource "oci_core_instance" "FoggyKitchenWebserver1" {
       systemctl enable httpd
       systemctl start httpd
       
-      # Verificar montaje NFS
-      mount | grep sharedfs || echo "Error: NFS mount failed" >> /var/log/messages
+      # Verificaciones
+      if ! mount | grep sharedfs; then
+        echo "Error: NFS mount failed" >> /var/log/messages
+        exit 1
+      fi
       
-      # Verificar Apache
-      systemctl status httpd || echo "Error: Apache failed to start" >> /var/log/messages
+      if ! systemctl is-active --quiet httpd; then
+        echo "Error: Apache failed to start" >> /var/log/messages
+        exit 1
+      fi
+      
+      # Verificar que los archivos existen y son accesibles
+      if ! curl -s http://localhost/sharedfs/health.html | grep -q "OK"; then
+        echo "Error: Health check file not accessible" >> /var/log/messages
+        exit 1
+      fi
     EOF
     )
   }
@@ -160,14 +172,15 @@ resource "oci_core_instance" "FoggyKitchenWebserver2" {
       # Agregar configuración de directorio para /sharedfs
       cat >> /etc/httpd/conf/httpd.conf <<EOL
       <Directory "/sharedfs">
+          Options Indexes FollowSymLinks
           AllowOverride None
           Require all granted
       </Directory>
       EOL
       
-      # Crear archivo de prueba para health check
-      mkdir -p /sharedfs
-      echo "<html><body>Server is running</body></html>" > /sharedfs/index.html
+      # Crear archivos necesarios en el FSS
+      echo "<html><body>OK</body></html>" > /sharedfs/health.html
+      echo "<html><body>Welcome to the shared web server</body></html>" > /sharedfs/index.html
       
       # Ajustar permisos
       chown -R apache:apache /sharedfs
@@ -182,11 +195,22 @@ resource "oci_core_instance" "FoggyKitchenWebserver2" {
       systemctl enable httpd
       systemctl start httpd
       
-      # Verificar montaje NFS
-      mount | grep sharedfs || echo "Error: NFS mount failed" >> /var/log/messages
+      # Verificaciones
+      if ! mount | grep sharedfs; then
+        echo "Error: NFS mount failed" >> /var/log/messages
+        exit 1
+      fi
       
-      # Verificar Apache
-      systemctl status httpd || echo "Error: Apache failed to start" >> /var/log/messages
+      if ! systemctl is-active --quiet httpd; then
+        echo "Error: Apache failed to start" >> /var/log/messages
+        exit 1
+      fi
+      
+      # Verificar que los archivos existen y son accesibles
+      if ! curl -s http://localhost/sharedfs/health.html | grep -q "OK"; then
+        echo "Error: Health check file not accessible" >> /var/log/messages
+        exit 1
+      fi
     EOF
     )
   }
