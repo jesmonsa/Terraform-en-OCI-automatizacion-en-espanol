@@ -30,17 +30,19 @@ resource "oci_load_balancer_backendset" "FoggyKitchenPublicLoadBalancerBackendse
 
   health_checker {
     protocol            = "HTTP"
-    url_path            = "/health"
+    url_path            = "/"
     port                = 80
-    interval_ms         = 3000
-    timeout_in_millis   = 3000
+    interval_ms         = 10000
+    timeout_in_millis   = 5000
     retries             = 3
+    return_code         = 200
     response_body_regex = ".*"
+    is_force_plain_text = true
   }
 
   session_persistence_configuration {
-    cookie_name          = "LBSessionID"
-    disable_fallback     = false
+    cookie_name      = "LBSessionID"
+    disable_fallback = false
   }
 }
 

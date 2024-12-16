@@ -47,6 +47,49 @@ resource "oci_core_instance" "FoggyKitchenWebserver1" {
   }
   metadata = {
     ssh_authorized_keys = tls_private_key.public_private_key_pair.public_key_openssh
+    user_data = base64encode(<<-EOF
+      #!/bin/bash
+      # Actualizar el sistema
+      yum update -y
+      # Instalar Apache y herramientas necesarias
+      yum install -y httpd wget unzip
+
+      # Configurar firewall
+      firewall-cmd --permanent --add-service=http
+      firewall-cmd --reload
+      
+      # Crear página de inicio personalizada
+      cat > /var/www/html/index.html <<HTML
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <title>Servidor Web 1</title>
+          <style>
+              body { font-family: Arial, sans-serif; margin: 0; padding: 20px; text-align: center; }
+              h1 { color: #333; }
+          </style>
+      </head>
+      <body>
+          <h1>Bienvenido al Servidor Web 1</h1>
+          <p>Este servidor está siendo gestionado por el balanceador de carga de OCI</p>
+          <p>Hostname: $(hostname)</p>
+          <p>IP: $(hostname -I | cut -d' ' -f1)</p>
+      </body>
+      </html>
+      HTML
+      
+      # Asegurar permisos correctos
+      chown -R apache:apache /var/www/html
+      chmod -R 755 /var/www/html
+      
+      # Iniciar y habilitar Apache
+      systemctl start httpd
+      systemctl enable httpd
+      
+      # Crear archivo de health check
+      echo "OK" > /var/www/html/health
+      EOF
+    )
   }
   create_vnic_details {
     subnet_id        = oci_core_subnet.FoggyKitchenWebSubnet.id
@@ -75,6 +118,49 @@ resource "oci_core_instance" "FoggyKitchenWebserver2" {
   }
   metadata = {
     ssh_authorized_keys = tls_private_key.public_private_key_pair.public_key_openssh
+    user_data = base64encode(<<-EOF
+      #!/bin/bash
+      # Actualizar el sistema
+      yum update -y
+      # Instalar Apache y herramientas necesarias
+      yum install -y httpd wget unzip
+
+      # Configurar firewall
+      firewall-cmd --permanent --add-service=http
+      firewall-cmd --reload
+      
+      # Crear página de inicio personalizada
+      cat > /var/www/html/index.html <<HTML
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <title>Servidor Web 2</title>
+          <style>
+              body { font-family: Arial, sans-serif; margin: 0; padding: 20px; text-align: center; }
+              h1 { color: #333; }
+          </style>
+      </head>
+      <body>
+          <h1>Bienvenido al Servidor Web 2</h1>
+          <p>Este servidor está siendo gestionado por el balanceador de carga de OCI</p>
+          <p>Hostname: $(hostname)</p>
+          <p>IP: $(hostname -I | cut -d' ' -f1)</p>
+      </body>
+      </html>
+      HTML
+      
+      # Asegurar permisos correctos
+      chown -R apache:apache /var/www/html
+      chmod -R 755 /var/www/html
+      
+      # Iniciar y habilitar Apache
+      systemctl start httpd
+      systemctl enable httpd
+      
+      # Crear archivo de health check
+      echo "OK" > /var/www/html/health
+      EOF
+    )
   }
   create_vnic_details {
     subnet_id        = oci_core_subnet.FoggyKitchenWebSubnet.id
