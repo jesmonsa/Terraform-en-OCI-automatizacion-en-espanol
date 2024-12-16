@@ -1,4 +1,9 @@
-# Home Region Subscription DataSource
+# Data source para AD
+data "oci_identity_availability_domains" "ADs" {
+  compartment_id = var.tenancy_ocid
+}
+
+# Data source para región home
 data "oci_identity_region_subscriptions" "home_region_subscriptions" {
   tenancy_id = var.tenancy_ocid
 
@@ -8,17 +13,12 @@ data "oci_identity_region_subscriptions" "home_region_subscriptions" {
   }
 }
 
-# ADs DataSource
-data "oci_identity_availability_domains" "ADs" {
-  compartment_id = var.tenancy_ocid
-}
-
-# Images DataSource
+# Data source para imagen OS
 data "oci_core_images" "OSImage" {
   compartment_id           = var.compartment_ocid
-  operating_system         = var.instance_os
+  operating_system        = var.instance_os
   operating_system_version = var.linux_os_version
-  shape                    = var.Shape
+  shape                   = var.Shape
 
   filter {
     name   = "display_name"
@@ -27,39 +27,36 @@ data "oci_core_images" "OSImage" {
   }
 }
 
-# Bastion Compute VNIC Attachment DataSource
-data "oci_core_vnic_attachments" "FoggyKitchenBastionServer_VNIC1_attach" {
-  availability_domain = var.availablity_domain_name == "" ? lookup(data.oci_identity_availability_domains.ADs.availability_domains[0], "name") : var.availablity_domain_name
-  compartment_id      = oci_identity_compartment.FoggyKitchenCompartment.id
-  instance_id         = oci_core_instance.FoggyKitchenBastionServer.id
-}
-
-# Bastion Compute VNIC DataSource
-data "oci_core_vnic" "FoggyKitchenBastionServer_VNIC1" {
-  vnic_id = data.oci_core_vnic_attachments.FoggyKitchenBastionServer_VNIC1_attach.vnic_attachments.0.vnic_id
-}
-
-# WebServer1 Compute VNIC Attachment DataSource
-data "oci_core_vnic_attachments" "FoggyKitchenWebserver1_VNIC1_attach" {
-  availability_domain = var.availablity_domain_name == "" ? lookup(data.oci_identity_availability_domains.ADs.availability_domains[0], "name") : var.availablity_domain_name
-  compartment_id      = oci_identity_compartment.FoggyKitchenCompartment.id
-  instance_id         = oci_core_instance.FoggyKitchenWebserver1.id
-}
-
-# WebServer1 Compute VNIC DataSource
+# Data sources para VNICs
 data "oci_core_vnic" "FoggyKitchenWebserver1_VNIC1" {
   vnic_id = data.oci_core_vnic_attachments.FoggyKitchenWebserver1_VNIC1_attach.vnic_attachments.0.vnic_id
 }
 
-# WebServer2 Compute VNIC Attachment DataSource
-data "oci_core_vnic_attachments" "FoggyKitchenWebserver2_VNIC1_attach" {
-  availability_domain = var.availablity_domain_name == "" ? lookup(data.oci_identity_availability_domains.ADs.availability_domains[0], "name") : var.availablity_domain_name
-  compartment_id      = oci_identity_compartment.FoggyKitchenCompartment.id
-  instance_id         = oci_core_instance.FoggyKitchenWebserver2.id
-}
-
-# WebServer2 Compute VNIC DataSource
 data "oci_core_vnic" "FoggyKitchenWebserver2_VNIC1" {
   vnic_id = data.oci_core_vnic_attachments.FoggyKitchenWebserver2_VNIC1_attach.vnic_attachments.0.vnic_id
 }
 
+data "oci_core_vnic" "FoggyKitchenBastionServer_VNIC1" {
+  vnic_id = data.oci_core_vnic_attachments.FoggyKitchenBastionServer_VNIC1_attach.vnic_attachments.0.vnic_id
+}
+
+# Data sources para VNIC attachments
+data "oci_core_vnic_attachments" "FoggyKitchenWebserver1_VNIC1_attach" {
+  compartment_id = oci_identity_compartment.FoggyKitchenCompartment.id
+  instance_id    = oci_core_instance.FoggyKitchenWebserver1.id
+}
+
+data "oci_core_vnic_attachments" "FoggyKitchenWebserver2_VNIC1_attach" {
+  compartment_id = oci_identity_compartment.FoggyKitchenCompartment.id
+  instance_id    = oci_core_instance.FoggyKitchenWebserver2.id
+}
+
+data "oci_core_vnic_attachments" "FoggyKitchenBastionServer_VNIC1_attach" {
+  compartment_id = oci_identity_compartment.FoggyKitchenCompartment.id
+  instance_id    = oci_core_instance.FoggyKitchenBastionServer.id
+}
+
+locals {
+  is_flexible_shape = contains(split(".", var.Shape), "Flex")
+  is_flexible_lb_shape = var.lb_shape == "flexible" ? true : false
+}

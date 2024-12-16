@@ -1,124 +1,109 @@
-# Setup FSS on Webserver1
-resource "null_resource" "FoggyKitchenWebserver1SharedFilesystem" {
-  depends_on = [oci_core_instance.FoggyKitchenWebserver1, oci_core_instance.FoggyKitchenBastionServer, oci_file_storage_export.FoggyKitchenExport]
+# Configuración de remote-exec para WebServer1
+resource "null_resource" "FoggyKitchenWebserver1ISCSI" {
+  depends_on = [oci_core_instance.FoggyKitchenWebserver1, oci_core_volume_attachment.FoggyKitchenWebserver1BlockVolume100G_attach]
 
   provisioner "remote-exec" {
     connection {
       type                = "ssh"
       user                = "opc"
-      host                = data.oci_core_vnic.FoggyKitchenWebserver1_VNIC1.private_ip_address
+      host                = oci_core_instance.FoggyKitchenWebserver1.private_ip
       private_key         = tls_private_key.public_private_key_pair.private_key_pem
+      script_path         = "/home/opc/myssh.sh"
       agent               = false
       timeout             = "10m"
-      bastion_host        = data.oci_core_vnic.FoggyKitchenBastionServer_VNIC1.public_ip_address
-      bastion_port        = "22"
+      bastion_host        = oci_core_instance.FoggyKitchenBastionServer.public_ip
       bastion_user        = "opc"
       bastion_private_key = tls_private_key.public_private_key_pair.private_key_pem
     }
     inline = [
-      "echo '== Configuring Shared Filesystem on Webserver1 =='",
-
-      # Instalar utilidades NFS
-      "sudo dnf install -y -q nfs-utils",
-
-      # Crear directorio compartido
-      "sudo mkdir -p /sharedfs",
-
-      # Configurar fstab
-      "sudo /bin/su -c \"echo '${var.MountTargetIPAddress}:/sharedfs /sharedfs nfs rsize=8192,wsize=8192,timeo=14,intr 0 0' >> /etc/fstab\"",
-
-      # Montar sistema de archivos
-      "sudo mount /sharedfs",
-
-      "echo '== Shared Filesystem Configured on Webserver1 =='"
+      "sudo -s bash -c 'iscsiadm -m node -o new -T ${oci_core_volume_attachment.FoggyKitchenWebserver1BlockVolume100G_attach.iqn} -p ${oci_core_volume_attachment.FoggyKitchenWebserver1BlockVolume100G_attach.ipv4}:${oci_core_volume_attachment.FoggyKitchenWebserver1BlockVolume100G_attach.port}'",
+      "sudo -s bash -c 'iscsiadm -m node -o update -T ${oci_core_volume_attachment.FoggyKitchenWebserver1BlockVolume100G_attach.iqn} -n node.startup -v automatic'",
+      "sudo -s bash -c 'iscsiadm -m node -T ${oci_core_volume_attachment.FoggyKitchenWebserver1BlockVolume100G_attach.iqn} -p ${oci_core_volume_attachment.FoggyKitchenWebserver1BlockVolume100G_attach.ipv4}:${oci_core_volume_attachment.FoggyKitchenWebserver1BlockVolume100G_attach.port} -l'",
+      "sudo -s bash -c 'mkfs.xfs /dev/sdb'",
+      "sudo -s bash -c 'mkdir -p /u01/app/data'",
+      "sudo -s bash -c 'mount /dev/sdb /u01/app/data'",
+      "sudo -s bash -c 'echo \"/dev/sdb /u01/app/data xfs defaults,_netdev,nofail 0 2\" >> /etc/fstab'",
     ]
   }
 }
 
-# Attachment of block volume to Webserver1
-resource "null_resource" "FoggyKitchenWebserver1_oci_iscsi_attach" {
-  depends_on = [oci_core_volume_attachment.FoggyKitchenWebserver1BlockVolume100G_attach]
-
-  provisioner "file" {
-    connection {
-      type                = "ssh"
-      user                = "opc"
-      host                = data.oci_core_vnic.FoggyKitchenWebserver1_VNIC1.private_ip_address
-      private_key         = tls_private_key.public_private_key_pair.private_key_pem
-      agent               = false
-      timeout             = "10m"
-      bastion_host        = data.oci_core_vnic.FoggyKitchenBastionServer_VNIC1.public_ip_address
-      bastion_port        = "22"
-      bastion_user        = "opc"
-      bastion_private_key = tls_private_key.public_private_key_pair.private_key_pem
-    }
-    source      = "iscsiattach.sh"
-    destination = "/home/opc/iscsiattach.sh"
-  }
+# Configuración de remote-exec para WebServer2
+resource "null_resource" "FoggyKitchenWebserver2ISCSI" {
+  depends_on = [oci_core_instance.FoggyKitchenWebserver2, oci_core_volume_attachment.FoggyKitchenWebserver2BlockVolume100G_attach]
 
   provisioner "remote-exec" {
     connection {
       type                = "ssh"
       user                = "opc"
-      host                = data.oci_core_vnic.FoggyKitchenWebserver1_VNIC1.private_ip_address
+      host                = oci_core_instance.FoggyKitchenWebserver2.private_ip
       private_key         = tls_private_key.public_private_key_pair.private_key_pem
+      script_path         = "/home/opc/myssh.sh"
       agent               = false
       timeout             = "10m"
-      bastion_host        = data.oci_core_vnic.FoggyKitchenBastionServer_VNIC1.public_ip_address
-      bastion_port        = "22"
+      bastion_host        = oci_core_instance.FoggyKitchenBastionServer.public_ip
       bastion_user        = "opc"
       bastion_private_key = tls_private_key.public_private_key_pair.private_key_pem
     }
     inline = [
-      "echo '== Preparing iSCSI Attach Script =='",
-
-      # Validar permisos
-      "sudo chmod +x /home/opc/iscsiattach.sh",
-
-      # Validar sintaxis del script
-      "sudo /bin/bash -n /home/opc/iscsiattach.sh",
-
-      # Ejecutar script
-      "sudo /home/opc/iscsiattach.sh",
-
-      "echo '== iSCSI Attach Completed =='"
+      "sudo -s bash -c 'iscsiadm -m node -o new -T ${oci_core_volume_attachment.FoggyKitchenWebserver2BlockVolume100G_attach.iqn} -p ${oci_core_volume_attachment.FoggyKitchenWebserver2BlockVolume100G_attach.ipv4}:${oci_core_volume_attachment.FoggyKitchenWebserver2BlockVolume100G_attach.port}'",
+      "sudo -s bash -c 'iscsiadm -m node -o update -T ${oci_core_volume_attachment.FoggyKitchenWebserver2BlockVolume100G_attach.iqn} -n node.startup -v automatic'",
+      "sudo -s bash -c 'iscsiadm -m node -T ${oci_core_volume_attachment.FoggyKitchenWebserver2BlockVolume100G_attach.iqn} -p ${oci_core_volume_attachment.FoggyKitchenWebserver2BlockVolume100G_attach.ipv4}:${oci_core_volume_attachment.FoggyKitchenWebserver2BlockVolume100G_attach.port} -l'",
+      "sudo -s bash -c 'mkfs.xfs /dev/sdb'",
+      "sudo -s bash -c 'mkdir -p /u01/app/data'",
+      "sudo -s bash -c 'mount /dev/sdb /u01/app/data'",
+      "sudo -s bash -c 'echo \"/dev/sdb /u01/app/data xfs defaults,_netdev,nofail 0 2\" >> /etc/fstab'",
     ]
   }
 }
 
-# Mount of attached block volume on Webserver1
-resource "null_resource" "FoggyKitchenWebserver1_oci_u01_fstab" {
-  depends_on = [null_resource.FoggyKitchenWebserver1_oci_iscsi_attach]
+# Configuración de FSS para WebServer1
+resource "null_resource" "FoggyKitchenWebserver1FSS" {
+  depends_on = [oci_core_instance.FoggyKitchenWebserver1, oci_file_storage_export.FoggyKitchenExport]
 
   provisioner "remote-exec" {
     connection {
       type                = "ssh"
       user                = "opc"
-      host                = data.oci_core_vnic.FoggyKitchenWebserver1_VNIC1.private_ip_address
+      host                = oci_core_instance.FoggyKitchenWebserver1.private_ip
       private_key         = tls_private_key.public_private_key_pair.private_key_pem
+      script_path         = "/home/opc/myssh.sh"
       agent               = false
       timeout             = "10m"
-      bastion_host        = data.oci_core_vnic.FoggyKitchenBastionServer_VNIC1.public_ip_address
-      bastion_port        = "22"
+      bastion_host        = oci_core_instance.FoggyKitchenBastionServer.public_ip
       bastion_user        = "opc"
       bastion_private_key = tls_private_key.public_private_key_pair.private_key_pem
     }
     inline = [
-      "echo '== Configuring Block Volume Mount =='",
+      "sudo -s bash -c 'yum install -y nfs-utils'",
+      "sudo -s bash -c 'mkdir -p /sharedfs'",
+      "sudo -s bash -c 'mount ${oci_file_storage_mount_target.FoggyKitchenMountTarget.ip_address}:/sharedfs /sharedfs'",
+      "sudo -s bash -c 'echo \"${oci_file_storage_mount_target.FoggyKitchenMountTarget.ip_address}:/sharedfs /sharedfs nfs defaults,_netdev,nofail 0 2\" >> /etc/fstab'",
+    ]
+  }
+}
 
-      # Crear partición y formatear
-      "sudo parted /dev/sdb --script -- mklabel gpt",
-      "sudo parted /dev/sdb --script -- mkpart primary ext4 0% 100%",
-      "sudo mkfs.ext4 -F /dev/sdb1",
+# Configuración de FSS para WebServer2
+resource "null_resource" "FoggyKitchenWebserver2FSS" {
+  depends_on = [oci_core_instance.FoggyKitchenWebserver2, oci_file_storage_export.FoggyKitchenExport]
 
-      # Crear punto de montaje
-      "sudo mkdir -p /u01",
-
-      # Montar el volumen y agregar a fstab
-      "sudo mount /dev/sdb1 /u01",
-      "sudo /bin/su -c \"echo '/dev/sdb1 /u01 ext4 defaults,noatime,_netdev 0 0' >> /etc/fstab\"",
-
-      "echo '== Block Volume Mounted on /u01 =='"
+  provisioner "remote-exec" {
+    connection {
+      type                = "ssh"
+      user                = "opc"
+      host                = oci_core_instance.FoggyKitchenWebserver2.private_ip
+      private_key         = tls_private_key.public_private_key_pair.private_key_pem
+      script_path         = "/home/opc/myssh.sh"
+      agent               = false
+      timeout             = "10m"
+      bastion_host        = oci_core_instance.FoggyKitchenBastionServer.public_ip
+      bastion_user        = "opc"
+      bastion_private_key = tls_private_key.public_private_key_pair.private_key_pem
+    }
+    inline = [
+      "sudo -s bash -c 'yum install -y nfs-utils'",
+      "sudo -s bash -c 'mkdir -p /sharedfs'",
+      "sudo -s bash -c 'mount ${oci_file_storage_mount_target.FoggyKitchenMountTarget.ip_address}:/sharedfs /sharedfs'",
+      "sudo -s bash -c 'echo \"${oci_file_storage_mount_target.FoggyKitchenMountTarget.ip_address}:/sharedfs /sharedfs nfs defaults,_netdev,nofail 0 2\" >> /etc/fstab'",
     ]
   }
 }
