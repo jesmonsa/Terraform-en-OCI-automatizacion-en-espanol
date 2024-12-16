@@ -34,23 +34,18 @@ resource "oci_load_balancer_backendset" "FoggyKitchenPublicLoadBalancerBackendse
 
   health_checker {
     protocol            = "HTTP"
-    url_path            = "/health"
+    url_path            = "/"
     port                = 80
     interval_ms         = var.health_check_interval_ms
     timeout_in_millis   = var.health_check_timeout_ms
     retries             = var.health_check_retries
     return_code         = 200
-    response_body_regex = ".*OK.*"
+    response_body_regex = ".*"
   }
 
   session_persistence_configuration {
     cookie_name      = "FoggyKitchenLB"
     disable_fallback = true
-  }
-
-  ssl_configuration {
-    certificate_name        = oci_load_balancer_certificate.lb_cert.certificate_name
-    verify_peer_certificate = false
   }
 }
 

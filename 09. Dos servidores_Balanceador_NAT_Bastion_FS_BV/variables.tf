@@ -251,18 +251,9 @@ locals {
     project     = "foggykitchen"
     terraform   = "true"
   }
-}
 
-locals {
   compute_flexible_shapes = [
     "VM.Standard.E3.Flex",
-    "VM.Standard.E4.Flex",
-    "VM.Standard.A1.Flex",
-    "VM.Optimized3.Flex"
+    "VM.Standard.E4.Flex"
   ]
-}
-
-locals {
-  is_flexible_shape    = contains(local.compute_flexible_shapes, var.Shape)
-  is_flexible_lb_shape = var.lb_shape == "flexible" ? true : false
 }

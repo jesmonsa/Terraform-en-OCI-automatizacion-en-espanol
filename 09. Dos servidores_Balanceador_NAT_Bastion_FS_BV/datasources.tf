@@ -56,7 +56,8 @@ data "oci_core_vnic_attachments" "FoggyKitchenBastionServer_VNIC1_attach" {
   instance_id    = oci_core_instance.FoggyKitchenBastionServer.id
 }
 
+# Locals consolidados
 locals {
-  is_flexible_shape = contains(split(".", var.Shape), "Flex")
+  is_flexible_shape    = contains(local.compute_flexible_shapes, var.Shape)
   is_flexible_lb_shape = var.lb_shape == "flexible" ? true : false
 }
