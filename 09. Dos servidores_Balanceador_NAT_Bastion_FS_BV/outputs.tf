@@ -7,13 +7,13 @@ output "FoggyKitchenBastionServer_PublicIP" {
 # Load Balancer Public IP
 output "FoggyKitchenPublicLoadBalancer_PublicIP" {
   description = "Public IP address of the Public Load Balancer"
-  value       = oci_load_balancer_load_balancer.FoggyKitchenPublicLoadBalancer.ip_address
+  value       = oci_load_balancer_load_balancer.FoggyKitchenPublicLoadBalancer.ip_addresses[0]
 }
 
 # Load Balancer URL
 output "FoggyKitchenPublicLoadBalancer_URL" {
   description = "URL to access the Public Load Balancer"
-  value       = "http://${oci_load_balancer_load_balancer.FoggyKitchenPublicLoadBalancer.ip_address}/shared/"
+  value       = "http://${oci_load_balancer_load_balancer.FoggyKitchenPublicLoadBalancer.ip_addresses[0]}/shared/"
 }
 
 # WebServer1 Private IP
