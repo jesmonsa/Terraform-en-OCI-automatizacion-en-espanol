@@ -9,62 +9,41 @@ resource "oci_load_balancer" "FoggyKitchenPublicLoadBalancer" {
       maximum_bandwidth_in_mbps = var.flex_lb_max_shape
     }
   }
-
   compartment_id = oci_identity_compartment.FoggyKitchenCompartment.id
-  subnet_ids     = [oci_core_subnet.FoggyKitchenLBSubnet.id]
-  display_name   = "FoggyKitchenPublicLoadBalancer"
-  is_private     = false
-
-  freeform_tags = merge(
-    local.common_tags,
-    {
-      role = "loadbalancer"
-      type = "public"
-    }
-  )
-
-  network_security_group_ids = []
+  subnet_ids = [
+    oci_core_subnet.FoggyKitchenLBSubnet.id
+  ]
+  display_name = "FoggyKitchenPublicLoadBalancer"
 }
 
-# Load Balancer Backend Set
-resource "oci_load_balancer_backendset" "FoggyKitchenPublicLoadBalancerBackendset" {
-  name             = "FoggyKitchenPublicLBBackendset"
-  load_balancer_id = oci_load_balancer.FoggyKitchenPublicLoadBalancer.id
-  policy           = "ROUND_ROBIN"
-
-  health_checker {
-    protocol            = "HTTP"
-    url_path            = "/"
-    port                = 80
-    interval_ms         = var.health_check_interval_ms
-    timeout_in_millis   = var.health_check_timeout_ms
-    retries             = var.health_check_retries
-    return_code         = 200
-    response_body_regex = ".*"
-  }
-
-  session_persistence_configuration {
-    cookie_name      = "FoggyKitchenLB"
-    disable_fallback = true
-  }
-}
-
-# Load Balancer Listener
+# LoadBalancer Listener
 resource "oci_load_balancer_listener" "FoggyKitchenPublicLoadBalancerListener" {
   load_balancer_id         = oci_load_balancer.FoggyKitchenPublicLoadBalancer.id
   name                     = "FoggyKitchenPublicLoadBalancerListener"
   default_backend_set_name = oci_load_balancer_backendset.FoggyKitchenPublicLoadBalancerBackendset.name
   port                     = 80
   protocol                 = "HTTP"
-
-  connection_configuration {
-    idle_timeout_in_seconds = 300
-  }
-
-  rule_set_names = []
 }
 
-# Backend for WebServer1
+# LoadBalancer Backendset
+resource "oci_load_balancer_backendset" "FoggyKitchenPublicLoadBalancerBackendset" {
+  name             = "FoggyKitchenPublicLBBackendset"
+  load_balancer_id = oci_load_balancer.FoggyKitchenPublicLoadBalancer.id
+  policy           = "ROUND_ROBIN"
+
+  health_checker {
+    port                = "80"
+    protocol            = "HTTP"
+    response_body_regex = ".*"
+    url_path            = "/sharedfs"
+    interval_ms         = "10000"
+    timeout_in_millis   = "3000"
+    retries            = 3
+    return_code        = 200
+  }
+}
+
+# LoadBalanacer Backend for WebServer1 Instance
 resource "oci_load_balancer_backend" "FoggyKitchenPublicLoadBalancerBackend1" {
   load_balancer_id = oci_load_balancer.FoggyKitchenPublicLoadBalancer.id
   backendset_name  = oci_load_balancer_backendset.FoggyKitchenPublicLoadBalancerBackendset.name
@@ -76,7 +55,7 @@ resource "oci_load_balancer_backend" "FoggyKitchenPublicLoadBalancerBackend1" {
   weight           = 1
 }
 
-# Backend for WebServer2
+# LoadBalanacer Backend for WebServer2 Instance
 resource "oci_load_balancer_backend" "FoggyKitchenPublicLoadBalancerBackend2" {
   load_balancer_id = oci_load_balancer.FoggyKitchenPublicLoadBalancer.id
   backendset_name  = oci_load_balancer_backendset.FoggyKitchenPublicLoadBalancerBackendset.name

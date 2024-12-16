@@ -1,75 +1,78 @@
 #!/bin/bash
-# iscsiattach.sh - Escanea y conecta automáticamente nuevos objetivos iSCSI
+# iscsiattach.sh - Scan and automatically attach new iSCSI targets
 #
-# Autor: Steven B. Nelson, adaptado por Jesus Montoya
-# Fecha: 20 April 2017, revisado el 14 December 2024
-# Copyright Oracle, Inc. Todos los derechos reservados.
+# Author: Steven B. Nelson, Sr. Solutions Architect
+#       Oracle Cloud Infrastructure
+#
+# 20 April 2017
+# Copyright Oracle, Inc.  All rights reserved.
 
-BASEADDR="169.254.2.2"  # Dirección base para discovery. Ajustar si es necesario.
-TIMEOUT=30              # Tiempo máximo de espera en segundos.
-MAX_ADDR=32             # Máximo de direcciones a probar.
-addrCount=0             # Contador inicial.
+BASEADDR="169.254.2.2"
 
-# Verificar que las herramientas necesarias están disponibles
-command -v iscsiadm >/dev/null 2>&1 || { echo "Error: 'iscsiadm' no está instalado."; exit 1; }
-command -v awk >/dev/null 2>&1 || { echo "Error: 'awk' no está instalado."; exit 1; }
-command -v timeout >/dev/null 2>&1 || { echo "Error: 'timeout' no está instalado."; exit 1; }
+# Set a base address incrementor so we can loop through all the
+# addresses.
+addrCount=0
 
-# Limpiar posibles pipes previos
-find . -maxdepth 1 -type p -exec rm {} \; 2>/dev/null
+#while [ ${addrCount} -le 32 ]
+while [ ${addrCount} -le 1 ]
+do
 
-# Iterar sobre direcciones IP
-while [ ${addrCount} -lt ${MAX_ADDR} ]; do
-    # Generar la dirección IP actual
-    CURRADDR=$(echo "${BASEADDR}" | awk -F\. '{last=$4+'${addrCount}';print $1"."$2"."$3"."last}')
-    echo "Intentando conexión a ${CURRADDR}..."
+	CURRADDR=`echo ${BASEADDR} | awk -F\. '{last=$4+'${addrCount}';print $1"."$2"."$3"."last}'`
 
-    # Crear pipe para manejar discovery
-    mkfifo discpipe
+	clear
+	echo "Attempting connection to ${CURRADDR}"
 
-    # Intentar discovery con timeout
-    timeout ${TIMEOUT} iscsiadm -m discovery -t st -p ${CURRADDR}:3260 | grep -v uefi | awk '{print $2}' > discpipe 2>/dev/null &
-    result=$?
+	mkfifo discpipe
+	# Find all the iSCSI Block Storage volumes attached to the instance but
+	# not configured for use on the instance.  Basically, get a list of the
+	# volumes that the instance can see, the loop through the ones it has,
+	# and add volumes not already configured on the instance.
+	#
+	# First get the list of volumes visible (attached) to the instance
 
-    if [ ${result} -ne 0 ]; then
-        echo "Error: No se pudo conectar a ${CURRADDR}. Saltando."
-        (( addrCount++ ))
-        find . -maxdepth 1 -type p -exec rm {} \;
-        continue
-    fi
+	iscsiadm -m discovery -t st -p ${CURRADDR}:3260 | grep -v uefi | awk '{print $2}' > discpipe 2> /dev/null &
 
-    # Iterar sobre targets descubiertos
-    while read -r target; do
-        echo "Verificando target: ${target}"
-
-        # Crear pipe para sesiones
-        mkfifo sesspipe
-        timeout ${TIMEOUT} iscsiadm -m session -P 0 | grep -v uefi | awk '{print $4}' > sesspipe 2>/dev/null &
-        
-        # Buscar si ya está configurado
-        found="false"
-        while read -r session; do
-            if [ "${target}" = "${session}" ]; then
-                found="true"
-                break
-            fi
-        done < sesspipe
-
-        # Configurar target si no está presente
-        if [ "${found}" = "false" ]; then
-            echo "Configurando target: ${target} en ${CURRADDR}"
-            iscsiadm -m node -o new -T ${target} -p ${CURRADDR}:3260
-            iscsiadm -m node -o update -T ${target} -n node.startup -v automatic
-            iscsiadm -m node -T ${target} -p ${CURRADDR}:3260 -l
-            sleep 10
-        else
-            echo "Target ${target} ya está configurado. Saltando."
-        fi
-    done < discpipe
-
-    # Incrementar contador y limpiar pipes
-    (( addrCount++ ))
-    find . -maxdepth 1 -type p -exec rm {} \;
+	# If the result is non-zero, that generally means that there are no targets available or
+	# that the portal is reachable but not active.  We make no distinction between the two
+	# and simply skip ahead.
+	result=$?
+	if [ ${result} -ne 0 ]
+	then
+		(( addrCount = addrCount + 1 ))
+		continue
+	fi
+	 
+	# Loop through the list (via the named FIFO pipe below)
+	while read target
+	do
+	    mkfifo sesspipe
+	    # Get the list of the currently attached Block Storage volumes
+	    iscsiadm -m session -P 0 | grep -v uefi | awk '{print $4}' > sesspipe 2> /dev/null &
+	     
+	    # Set a flag, and loop through the sessions (attached, but not configured)
+	    # and see if the volumes match.  If so, skip to the next until we get
+	    # through the list.  Session list is via the pipe.
+	    found="false"
+	    while read session
+	    do
+		if [ ${target} = ${session} ]
+		then
+		    found="true"
+		    break
+		fi
+	    done < sesspipe
+	     
+	    # If the volume is not found, configure it.  Get the resulting device file.
+	    if [ ${found} = "false" ]
+	    then
+		iscsiadm -m node -o new -T ${target} -p ${CURRADDR}:3260
+		iscsiadm -m node -o update -T ${target} -n node.startup -v automatic
+		iscsiadm -m node -T ${target} -p ${CURRADDR}:3260 -l
+		sleep 10
+	    fi
+	done < discpipe
+	
+	(( addrCount = addrCount + 1 ))
+	find . -maxdepth 1 -type p -exec rm {} \;
 done
-
-echo "Proceso de escaneo y configuración completado."
+echo "Scan Complete."

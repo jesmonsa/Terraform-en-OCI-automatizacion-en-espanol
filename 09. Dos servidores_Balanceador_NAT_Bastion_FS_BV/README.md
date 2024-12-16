@@ -1,114 +1,77 @@
-# Infraestructura OCI con Balanceador, NAT, Bastion y Almacenamiento
+# FoggyKitchen Terraform OCI Course
 
-## Descripción General
+## LESSON 6 - Local Block Volume
 
-Este proyecto implementa una infraestructura completa en Oracle Cloud Infrastructure (OCI) que incluye:
+In this lesson, we will add only one additional OCI resource. It will be 100G block volume (*oci_core_volume*), which will be then associated with the first web server VM. With the usage of *Null Provider* we will execute the script to discover iscsi disk on Webserver1, configure partition there, format as ext4 filesystem and finally mount it as /u01 (entries added to /etc/fstab). This kind of block volume can be used for example for installation of Glassfish or any other Application Container software which requires a lot of space. 
 
-- Dos servidores web en una subred privada
-- Un balanceador de carga público
-- Un servidor bastion para acceso SSH
-- Sistema de archivos compartido (FSS)
-- Volúmenes de bloque para almacenamiento adicional
-- Gateway NAT para acceso a Internet desde las subredes privadas
+![](LESSON6_local_block_volumes.jpg)
 
-## Arquitectura
+## Deploy Using Oracle Resource Manager
 
-La infraestructura se compone de:
+1. Click [![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?region=home&zipUrl=https://github.com/mlinxfeld/foggykitchen_tf_oci_course/releases/latest/download/LESSON6_local_block_volumes.zip)
 
-1. **Networking**:
-   - VCN con CIDR 10.0.0.0/16
-   - Subred privada para servidores web (10.0.1.0/24)
-   - Subred pública para balanceador (10.0.2.0/24)
-   - Subred pública para bastion (10.0.3.0/24)
-   - NAT Gateway y Internet Gateway
+    If you aren't already signed in, when prompted, enter the tenancy and user credentials.
 
-2. **Compute**:
-   - 2 servidores web Oracle Linux 8
-   - 1 servidor bastion
-   - Todos usando shape flexible VM.Standard.E4.Flex
+2. Review and accept the terms and conditions.
 
-3. **Almacenamiento**:
-   - File Storage Service (FSS) compartido
-   - Volúmenes de bloque de 100GB para cada servidor web
+3. Select the region where you want to deploy the stack.
 
-4. **Balanceo de Carga**:
-   - Balanceador público flexible
-   - Health checks configurados
-   - Round-robin entre servidores web
+4. Follow the on-screen prompts and instructions to create the stack.
 
-## Requisitos Previos
+5. After creating the stack, click **Terraform Actions**, and select **Plan**.
 
-1. Cuenta en OCI con privilegios adecuados
-2. Terraform v1.0.0 o superior
-3. OCI CLI configurado (opcional)
+6. Wait for the job to be completed, and review the plan.
 
-## Variables de Entorno Necesarias
+    To make any changes, return to the Stack Details page, click **Edit Stack**, and make the required changes. Then, run the **Plan** action again.
 
-```bash
-export TF_VAR_tenancy_ocid="your_tenancy_ocid"
-export TF_VAR_user_ocid="your_user_ocid"
-export TF_VAR_fingerprint="your_api_key_fingerprint"
-export TF_VAR_private_key_path="path_to_your_private_key"
-export TF_VAR_region="your_region"
-export TF_VAR_compartment_ocid="your_compartment_ocid"
+7. If no further changes are necessary, return to the Stack Details page, click **Terraform Actions**, and select **Apply**. 
+
+## Deploy Using the Terraform CLI
+
+### Clone of the repo
+Now, you'll want a local copy of this repo. You can make that with the commands:
+
+Clone the repo from github by executing the command as follows and then go to proper subdirectory:
+
+```
+Martin-MacBook-Pro:~ martinlinxfeld$ git clone https://github.com/mlinxfeld/foggykitchen_tf_oci_course.git
+
+Martin-MacBook-Pro:~ martinlinxfeld$ cd foggykitchen_tf_oci_course/
+
+Martin-MacBook-Pro:foggykitchen_tf_oci_course martinlinxfeld$ cd LESSON6_local_block_volumes
+
 ```
 
-## Despliegue
+### Prerequisites
+Create environment file with TF_VARs:
 
-1. Clonar el repositorio
-2. Configurar variables de entorno
-3. Inicializar Terraform:
-   ```bash
-   terraform init
-   ```
-4. Planear el despliegue:
-   ```bash
-   terraform plan
-   ```
-5. Aplicar la configuración:
-   ```bash
-   terraform apply
-   ```
+```
+Martin-MacBook-Pro:LESSON6_local_block_volumes martinlinxfeld$ vi setup_oci_tf_vars.sh
 
-## Acceso a los Servidores
+export TF_VAR_user_ocid="ocid1.user.oc1..aaaaaaaaob4qbf2(...)uunizjie4his4vgh3jx5jxa"
+export TF_VAR_tenancy_ocid="ocid1.tenancy.oc1..aaaaaaaas(...)krj2s3gdbz7d2heqzzxn7pe64ksbia"
+export TF_VAR_compartment_ocid="ocid1.tenancy.oc1..aaaaaaaasbktyckn(...)ldkrj2s3gdbz7d2heqzzxn7pe64ksbia"
+export TF_VAR_fingerprint="00:f9:d1:41:bb:57(...)82:47:e6:00"
+export TF_VAR_private_key_path="/tmp/oci_api_key.pem"
+export TF_VAR_region="eu-amsterdam-1"
 
-1. **Bastion**:
-   - SSH directo usando la clave privada generada
-   - IP pública disponible en los outputs
-
-2. **Servidores Web**:
-   - SSH a través del bastion
-   - Acceso web a través del balanceador de carga
-
-## Mantenimiento
-
-1. **Backups**:
-   - Los volúmenes de bloque pueden tener política de backup
-   - FSS soporta snapshots
-
-2. **Monitoreo**:
-   - Health checks del balanceador
-   - Métricas de compute y storage disponibles
-
-3. **Seguridad**:
-   - Security lists configuradas
-   - Acceso SSH restringido vía bastion
-   - SELinux habilitado y configurado
-
-## Destrucción de Recursos
-
-Para eliminar toda la infraestructura:
-```bash
-terraform destroy
+Martin-MacBook-Pro:LESSON6_local_block_volumes martinlinxfeld$ source setup_oci_tf_vars.sh
 ```
 
-## Notas Importantes
+### Create the Resources
+Run the following commands:
 
-1. Los servidores web están en una subred privada
-2. El balanceador es el único punto de acceso público a los servicios web
-3. Todo el acceso SSH debe realizarse a través del bastion
-4. Los volúmenes de bloque y FSS persisten aunque se destruyan las instancias
+```
+Martin-MacBook-Pro:LESSON6_local_block_volumes martinlinxfeld$ terraform init
+    
+Martin-MacBook-Pro:LESSON6_local_block_volumes martinlinxfeld$ terraform plan
 
-## Soporte
+Martin-MacBook-Pro:LESSON6_local_block_volumes martinlinxfeld$ terraform apply
+```
 
-Para problemas o mejoras, por favor abrir un issue en el repositorio.
+### Destroy the Deployment
+When you no longer need the deployment, you can run this command to destroy the resources:
+
+```
+Martin-MacBook-Pro:LESSON6_local_block_volumes martinlinxfeld$ terraform destroy
+```
