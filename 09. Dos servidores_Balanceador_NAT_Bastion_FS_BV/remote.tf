@@ -150,7 +150,7 @@ resource "null_resource" "FoggyKitchenWebserver1_oci_iscsi_attach" {
       private_key         = tls_private_key.public_private_key_pair.private_key_pem
       script_path         = "/home/opc/myssh.sh"
       agent               = false
-      timeout             = "20m"
+      timeout             = "10m"
       bastion_host        = data.oci_core_vnic.FoggyKitchenBastionServer_VNIC1.public_ip_address
       bastion_port        = "22"
       bastion_user        = "opc"
@@ -159,8 +159,9 @@ resource "null_resource" "FoggyKitchenWebserver1_oci_iscsi_attach" {
 
     inline = [
       "sudo chmod +x /home/opc/iscsiattach.sh",
-      "sudo /home/opc/iscsiattach.sh 2>&1 | sudo tee /var/log/iscsiattach.log",
-      "echo 'iSCSI attachment completed'"
+      "echo 'Starting iSCSI attachment process...'",
+      "sudo /home/opc/iscsiattach.sh 2>&1 | sudo tee /var/log/iscsiattach.log || (echo 'iSCSI attachment failed' && exit 1)",
+      "echo 'iSCSI attachment process completed'"
     ]
   }
 

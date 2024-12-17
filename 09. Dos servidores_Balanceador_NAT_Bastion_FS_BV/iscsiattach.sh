@@ -1,90 +1,78 @@
 #!/bin/bash
-# iscsiattach.sh - Scan and automatically attach new iSCSI targets
 
-# Habilitar el modo de depuración
+# Configurar timeout global de 5 minutos
+TIMEOUT=300
+export SECONDS=0
+
+# Habilitar modo de depuración y manejo de errores
 set -x
-
-# Configurar manejo de errores
 set -e
+
+# Función de timeout
+timeout_handler() {
+    echo "Script execution timed out after $TIMEOUT seconds"
+    exit 1
+}
+
+# Configurar trap para el timeout
+trap timeout_handler ALRM
+( sleep $TIMEOUT; kill -ALRM $$ ) & TIMEOUT_PID=$!
 
 BASEADDR="169.254.2.2"
 addrCount=0
 
-# Asegurarse de que iscsiadm está instalado
-if ! command -v iscsiadm &> /dev/null; then
-    echo "Installing iscsi-initiator-utils..."
-    sudo yum install -y iscsi-initiator-utils
-fi
-
-# Asegurarse de que el servicio iscsid está activo
-sudo systemctl start iscsid
-sudo systemctl enable iscsid
+# Verificar y arrancar servicios necesarios
+echo "Starting required services..."
+sudo systemctl start iscsid || true
+sudo systemctl enable iscsid || true
 
 # Función de limpieza
 cleanup() {
+    kill $TIMEOUT_PID 2>/dev/null || true
     find . -maxdepth 1 -type p -exec rm -f {} \; 2>/dev/null || true
 }
-
-# Registrar la función de limpieza para ejecutarse al salir
 trap cleanup EXIT
 
-while [ ${addrCount} -le 1 ]; do
+while [ ${addrCount} -le 1 ] && [ $SECONDS -lt $TIMEOUT ]; do
     CURRADDR=$(echo ${BASEADDR} | awk -F\. '{last=$4+'${addrCount}';print $1"."$2"."$3"."last}')
+    echo "Scanning ${CURRADDR} (${SECONDS}s elapsed)"
     
-    echo "Attempting connection to ${CURRADDR}"
-    
-    # Crear pipe con nombre único
-    DISCPIPE="/tmp/discpipe_$$"
-    SESSPIPE="/tmp/sesspipe_$$"
-    
-    mkfifo "${DISCPIPE}" || { echo "Failed to create FIFO ${DISCPIPE}"; exit 1; }
-    
-    # Descubrir targets
-    if ! timeout 30 iscsiadm -m discovery -t st -p ${CURRADDR}:3260 | grep -v uefi | awk '{print $2}' > "${DISCPIPE}"; then
+    # Intentar descubrir targets con timeout de 30 segundos
+    if ! timeout 30 iscsiadm -m discovery -t st -p ${CURRADDR}:3260 > /tmp/targets.txt 2>/dev/null; then
         echo "No targets found at ${CURRADDR}"
-        rm -f "${DISCPIPE}"
         (( addrCount = addrCount + 1 ))
         continue
     fi
     
     # Procesar cada target encontrado
-    while read target; do
-        mkfifo "${SESSPIPE}" || { echo "Failed to create FIFO ${SESSPIPE}"; continue; }
+    while read -r line; do
+        target=$(echo $line | awk '{print $2}')
+        echo "Processing target: ${target}"
         
-        if ! timeout 30 iscsiadm -m session -P 0 | grep -v uefi | awk '{print $4}' > "${SESSPIPE}"; then
-            echo "No existing sessions found"
-            rm -f "${SESSPIPE}"
+        # Verificar si ya está conectado
+        if iscsiadm -m session | grep -q "${target}"; then
+            echo "Target ${target} already connected"
             continue
         fi
         
-        found="false"
-        while read session; do
-            if [ "${target}" = "${session}" ]; then
-                found="true"
-                break
-            fi
-        done < "${SESSPIPE}"
+        # Intentar conectar el target
+        echo "Connecting to target ${target}"
+        timeout 30 iscsiadm -m node -o new -T ${target} -p ${CURRADDR}:3260 || continue
+        timeout 30 iscsiadm -m node -o update -T ${target} -n node.startup -v automatic || continue
+        timeout 30 iscsiadm -m node -T ${target} -p ${CURRADDR}:3260 -l || continue
         
-        rm -f "${SESSPIPE}"
+        # Esperar a que el dispositivo aparezca
+        echo "Waiting for device to appear..."
+        sleep 5
         
-        if [ "${found}" = "false" ]; then
-            echo "Configuring new target: ${target}"
-            iscsiadm -m node -o new -T ${target} -p ${CURRADDR}:3260
-            iscsiadm -m node -o update -T ${target} -n node.startup -v automatic
-            iscsiadm -m node -T ${target} -p ${CURRADDR}:3260 -l
-            sleep 5
-            
-            # Verificar si el login fue exitoso
-            if ! iscsiadm -m session | grep -q "${target}"; then
-                echo "Failed to login to target ${target}"
-                continue
-            fi
-        fi
-    done < "${DISCPIPE}"
+    done < /tmp/targets.txt
     
-    rm -f "${DISCPIPE}"
+    rm -f /tmp/targets.txt
     (( addrCount = addrCount + 1 ))
 done
 
-echo "Scan Complete"
+# Si llegamos aquí sin error, cancelar el timeout
+kill $TIMEOUT_PID 2>/dev/null || true
+
+echo "Scan complete after ${SECONDS} seconds"
 exit 0
