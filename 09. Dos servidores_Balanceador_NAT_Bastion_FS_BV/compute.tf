@@ -50,48 +50,69 @@ resource "oci_core_instance" "FoggyKitchenWebserver1" {
     user_data = base64encode(<<-EOF
       #!/bin/bash
       
-      # Logging
-      exec 1> >(logger -s -t $(basename $0)) 2>&1
+      # Habilitar logging detallado
+      exec 1> >(tee -a /var/log/user_data.log) 2>&1
+      set -x
+      
+      echo "=== Iniciando configuración del servidor web ==="
       
       # Instalar paquetes necesarios
-      yum install -y httpd nfs-utils oracle-cloud-agent
+      echo "=== Instalando paquetes ==="
+      yum install -y nfs-utils httpd oracle-cloud-agent
       
-      # Asegurarse que los servicios necesarios estén iniciados
-      systemctl enable nfs-server
-      systemctl start nfs-server
-      systemctl enable rpcbind
-      systemctl start rpcbind
+      # Configurar servicios NFS
+      echo "=== Configurando servicios NFS ==="
+      systemctl enable rpcbind nfs-server
+      systemctl start rpcbind nfs-server
       
-      # Crear directorio para el montaje y asignar permisos
+      # Crear y configurar directorio compartido
+      echo "=== Configurando directorio compartido ==="
       mkdir -p /sharedfs
-      chmod 755 /sharedfs
+      chmod 777 /sharedfs
       
-      # Intentar montar el FSS varias veces
-      max_attempts=5
-      attempt=1
-      while [ $attempt -le $max_attempts ]; do
-        echo "Intento $attempt de $max_attempts para montar NFS..."
-        mount -t nfs -o rw,bg,hard,nointr,rsize=1048576,wsize=1048576,tcp,actimeo=0,vers=3 ${var.MountTargetIPAddress}:/sharedfs /sharedfs && break
-        attempt=$((attempt+1))
+      # Esperar a que el mount target esté disponible
+      echo "=== Esperando al mount target ==="
+      while ! ping -c1 ${var.MountTargetIPAddress} &>/dev/null; do
+        echo "Esperando que el mount target ${var.MountTargetIPAddress} esté disponible..."
         sleep 10
       done
       
-      # Verificar si el montaje fue exitoso
+      # Montar el FSS con reintentos
+      echo "=== Montando FSS ==="
+      mount_attempts=0
+      max_mount_attempts=10
+      
+      until mount -t nfs -o rw,bg,hard,nointr,rsize=1048576,wsize=1048576,tcp,actimeo=0,vers=3 ${var.MountTargetIPAddress}:/sharedfs /sharedfs || [ $mount_attempts -eq $max_mount_attempts ]; do
+        mount_attempts=$((mount_attempts+1))
+        echo "Intento $mount_attempts de $max_mount_attempts para montar NFS"
+        sleep 30
+      done
+      
+      # Verificar montaje
       if ! mount | grep -q "/sharedfs"; then
-        echo "Error: Fallo al montar NFS después de $max_attempts intentos"
+        echo "ERROR: Fallo al montar el FSS después de $max_mount_attempts intentos"
         exit 1
       fi
       
-      # Agregar entrada en fstab
+      # Configurar fstab
+      echo "=== Configurando fstab ==="
       echo "${var.MountTargetIPAddress}:/sharedfs /sharedfs nfs rw,bg,hard,nointr,rsize=1048576,wsize=1048576,tcp,actimeo=0,vers=3 0 0" >> /etc/fstab
       
       # Configurar SELinux
+      echo "=== Configurando SELinux ==="
       setsebool -P httpd_use_nfs 1
       semanage fcontext -a -t httpd_sys_content_t "/sharedfs(/.*)?"
       restorecon -Rv /sharedfs
       
+      # Crear archivos web
+      echo "=== Creando archivos web ==="
+      echo "<html><body>OK</body></html>" > /sharedfs/health.html
+      echo "<html><body>Welcome to Shared Web Server</body></html>" > /sharedfs/index.html
+      
       # Configurar Apache
+      echo "=== Configurando Apache ==="
       cat > /etc/httpd/conf.d/sharedfs.conf <<EOL
+      Alias "/shared" "/sharedfs"
       <Directory "/sharedfs">
           Options Indexes FollowSymLinks
           AllowOverride None
@@ -99,15 +120,13 @@ resource "oci_core_instance" "FoggyKitchenWebserver1" {
       </Directory>
       EOL
       
-      # Crear archivo de prueba para health check
-      echo "<html><body>OK</body></html>" > /sharedfs/health.html
-      echo "<html><body>Welcome to Shared Web Server</body></html>" > /sharedfs/index.html
-      
       # Ajustar permisos
+      echo "=== Ajustando permisos ==="
       chown -R apache:apache /sharedfs
       chmod -R 755 /sharedfs
       
       # Configurar firewall
+      echo "=== Configurando firewall ==="
       firewall-cmd --permanent --add-service=http
       firewall-cmd --permanent --add-service=https
       firewall-cmd --permanent --add-service=nfs
@@ -115,13 +134,19 @@ resource "oci_core_instance" "FoggyKitchenWebserver1" {
       firewall-cmd --permanent --add-service=rpc-bind
       firewall-cmd --reload
       
-      # Reiniciar Apache para aplicar cambios
-      systemctl restart httpd
+      # Iniciar y habilitar Apache
+      echo "=== Iniciando Apache ==="
       systemctl enable httpd
+      systemctl restart httpd
       
-      # Verificar que todo esté funcionando
-      curl -s http://localhost/sharedfs/health.html || echo "Error: No se puede acceder a health.html"
-      df -h | grep sharedfs || echo "Error: No se puede ver el montaje NFS"
+      # Verificar configuración
+      echo "=== Verificando configuración ==="
+      curl -v http://localhost/shared/health.html
+      df -h | grep sharedfs
+      mount | grep sharedfs
+      ls -la /sharedfs
+      
+      echo "=== Configuración completada ==="
     EOF
     )
   }
@@ -155,48 +180,69 @@ resource "oci_core_instance" "FoggyKitchenWebserver2" {
     user_data = base64encode(<<-EOF
       #!/bin/bash
       
-      # Logging
-      exec 1> >(logger -s -t $(basename $0)) 2>&1
+      # Habilitar logging detallado
+      exec 1> >(tee -a /var/log/user_data.log) 2>&1
+      set -x
+      
+      echo "=== Iniciando configuración del servidor web ==="
       
       # Instalar paquetes necesarios
-      yum install -y httpd nfs-utils oracle-cloud-agent
+      echo "=== Instalando paquetes ==="
+      yum install -y nfs-utils httpd oracle-cloud-agent
       
-      # Asegurarse que los servicios necesarios estén iniciados
-      systemctl enable nfs-server
-      systemctl start nfs-server
-      systemctl enable rpcbind
-      systemctl start rpcbind
+      # Configurar servicios NFS
+      echo "=== Configurando servicios NFS ==="
+      systemctl enable rpcbind nfs-server
+      systemctl start rpcbind nfs-server
       
-      # Crear directorio para el montaje y asignar permisos
+      # Crear y configurar directorio compartido
+      echo "=== Configurando directorio compartido ==="
       mkdir -p /sharedfs
-      chmod 755 /sharedfs
+      chmod 777 /sharedfs
       
-      # Intentar montar el FSS varias veces
-      max_attempts=5
-      attempt=1
-      while [ $attempt -le $max_attempts ]; do
-        echo "Intento $attempt de $max_attempts para montar NFS..."
-        mount -t nfs -o rw,bg,hard,nointr,rsize=1048576,wsize=1048576,tcp,actimeo=0,vers=3 ${var.MountTargetIPAddress}:/sharedfs /sharedfs && break
-        attempt=$((attempt+1))
+      # Esperar a que el mount target esté disponible
+      echo "=== Esperando al mount target ==="
+      while ! ping -c1 ${var.MountTargetIPAddress} &>/dev/null; do
+        echo "Esperando que el mount target ${var.MountTargetIPAddress} esté disponible..."
         sleep 10
       done
       
-      # Verificar si el montaje fue exitoso
+      # Montar el FSS con reintentos
+      echo "=== Montando FSS ==="
+      mount_attempts=0
+      max_mount_attempts=10
+      
+      until mount -t nfs -o rw,bg,hard,nointr,rsize=1048576,wsize=1048576,tcp,actimeo=0,vers=3 ${var.MountTargetIPAddress}:/sharedfs /sharedfs || [ $mount_attempts -eq $max_mount_attempts ]; do
+        mount_attempts=$((mount_attempts+1))
+        echo "Intento $mount_attempts de $max_mount_attempts para montar NFS"
+        sleep 30
+      done
+      
+      # Verificar montaje
       if ! mount | grep -q "/sharedfs"; then
-        echo "Error: Fallo al montar NFS después de $max_attempts intentos"
+        echo "ERROR: Fallo al montar el FSS después de $max_mount_attempts intentos"
         exit 1
       fi
       
-      # Agregar entrada en fstab
+      # Configurar fstab
+      echo "=== Configurando fstab ==="
       echo "${var.MountTargetIPAddress}:/sharedfs /sharedfs nfs rw,bg,hard,nointr,rsize=1048576,wsize=1048576,tcp,actimeo=0,vers=3 0 0" >> /etc/fstab
       
       # Configurar SELinux
+      echo "=== Configurando SELinux ==="
       setsebool -P httpd_use_nfs 1
       semanage fcontext -a -t httpd_sys_content_t "/sharedfs(/.*)?"
       restorecon -Rv /sharedfs
       
+      # Crear archivos web
+      echo "=== Creando archivos web ==="
+      echo "<html><body>OK</body></html>" > /sharedfs/health.html
+      echo "<html><body>Welcome to Shared Web Server</body></html>" > /sharedfs/index.html
+      
       # Configurar Apache
+      echo "=== Configurando Apache ==="
       cat > /etc/httpd/conf.d/sharedfs.conf <<EOL
+      Alias "/shared" "/sharedfs"
       <Directory "/sharedfs">
           Options Indexes FollowSymLinks
           AllowOverride None
@@ -204,15 +250,13 @@ resource "oci_core_instance" "FoggyKitchenWebserver2" {
       </Directory>
       EOL
       
-      # Crear archivo de prueba para health check
-      echo "<html><body>OK</body></html>" > /sharedfs/health.html
-      echo "<html><body>Welcome to Shared Web Server</body></html>" > /sharedfs/index.html
-      
       # Ajustar permisos
+      echo "=== Ajustando permisos ==="
       chown -R apache:apache /sharedfs
       chmod -R 755 /sharedfs
       
       # Configurar firewall
+      echo "=== Configurando firewall ==="
       firewall-cmd --permanent --add-service=http
       firewall-cmd --permanent --add-service=https
       firewall-cmd --permanent --add-service=nfs
@@ -220,13 +264,19 @@ resource "oci_core_instance" "FoggyKitchenWebserver2" {
       firewall-cmd --permanent --add-service=rpc-bind
       firewall-cmd --reload
       
-      # Reiniciar Apache para aplicar cambios
-      systemctl restart httpd
+      # Iniciar y habilitar Apache
+      echo "=== Iniciando Apache ==="
       systemctl enable httpd
+      systemctl restart httpd
       
-      # Verificar que todo esté funcionando
-      curl -s http://localhost/sharedfs/health.html || echo "Error: No se puede acceder a health.html"
-      df -h | grep sharedfs || echo "Error: No se puede ver el montaje NFS"
+      # Verificar configuración
+      echo "=== Verificando configuración ==="
+      curl -v http://localhost/shared/health.html
+      df -h | grep sharedfs
+      mount | grep sharedfs
+      ls -la /sharedfs
+      
+      echo "=== Configuración completada ==="
     EOF
     )
   }
