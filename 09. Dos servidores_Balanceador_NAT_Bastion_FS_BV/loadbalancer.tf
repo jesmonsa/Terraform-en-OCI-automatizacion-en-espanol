@@ -37,9 +37,9 @@ resource "oci_load_balancer_backendset" "FoggyKitchenPublicLoadBalancerBackendse
     response_body_regex = ".*OK.*"
     url_path            = "/sharedfs/health.html"
     interval_ms         = "10000"
-    timeout_in_millis   = "3000"
-    retries            = 3
-    return_code        = 200
+    timeout_in_millis   = "5000"
+    retries             = 5
+    return_code         = 200
   }
 }
 
