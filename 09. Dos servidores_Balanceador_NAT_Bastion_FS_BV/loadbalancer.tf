@@ -35,7 +35,7 @@ resource "oci_load_balancer_backendset" "FoggyKitchenPublicLoadBalancerBackendse
     port                = "80"
     protocol            = "HTTP"
     response_body_regex = ".*OK.*"
-    url_path            = "/shared/health.html"
+    url_path            = "/health.html"
     interval_ms         = "10000"
     timeout_in_millis   = "5000"
     retries             = 5

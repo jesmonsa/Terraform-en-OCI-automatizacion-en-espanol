@@ -67,8 +67,8 @@ resource "oci_core_instance" "FoggyKitchenWebserver1" {
       
       # Crear y configurar directorio compartido
       echo "=== Configurando directorio compartido ==="
-      mkdir -p /sharedfs
-      chmod 777 /sharedfs
+      mkdir -p /shared
+      chmod 777 /shared
       
       # Esperar a que el mount target esté disponible
       echo "=== Esperando al mount target ==="
@@ -82,48 +82,48 @@ resource "oci_core_instance" "FoggyKitchenWebserver1" {
       mount_attempts=0
       max_mount_attempts=10
       
-      until mount -t nfs -o rw,bg,hard,nointr,rsize=1048576,wsize=1048576,tcp,actimeo=0,vers=3 ${var.MountTargetIPAddress}:/sharedfs /sharedfs || [ $mount_attempts -eq $max_mount_attempts ]; do
+      until mount -t nfs -o rw,bg,hard,nointr,rsize=1048576,wsize=1048576,tcp,actimeo=0,vers=3 ${var.MountTargetIPAddress}:/shared /shared || [ $mount_attempts -eq $max_mount_attempts ]; do
         mount_attempts=$((mount_attempts+1))
         echo "Intento $mount_attempts de $max_mount_attempts para montar NFS"
         sleep 30
       done
       
       # Verificar montaje
-      if ! mount | grep -q "/sharedfs"; then
+      if ! mount | grep -q "/shared"; then
         echo "ERROR: Fallo al montar el FSS después de $max_mount_attempts intentos"
         exit 1
       fi
       
       # Configurar fstab
       echo "=== Configurando fstab ==="
-      echo "${var.MountTargetIPAddress}:/sharedfs /sharedfs nfs rw,bg,hard,nointr,rsize=1048576,wsize=1048576,tcp,actimeo=0,vers=3 0 0" >> /etc/fstab
+      echo "${var.MountTargetIPAddress}:/shared /shared nfs rw,bg,hard,nointr,rsize=1048576,wsize=1048576,tcp,actimeo=0,vers=3 0 0" >> /etc/fstab
       
       # Configurar SELinux
       echo "=== Configurando SELinux ==="
       setsebool -P httpd_use_nfs 1
-      semanage fcontext -a -t httpd_sys_content_t "/sharedfs(/.*)?"
-      restorecon -Rv /sharedfs
+      semanage fcontext -a -t httpd_sys_content_t "/shared(/.*)?"
+      restorecon -Rv /shared
       
       # Crear archivos web
       echo "=== Creando archivos web ==="
-      echo "<html><body>OK</body></html>" > /sharedfs/health.html
-      echo "<html><body>Welcome to Shared Web Server</body></html>" > /sharedfs/index.html
+      echo "<html><body>OK</body></html>" > /shared/health.html
+      echo "<html><body>Welcome to Shared Web Server</body></html>" > /shared/index.html
       
       # Configurar Apache
       echo "=== Configurando Apache ==="
-      cat > /etc/httpd/conf.d/sharedfs.conf <<EOL
-      Alias "/shared" "/sharedfs"
-      <Directory "/sharedfs">
-          Options Indexes FollowSymLinks
-          AllowOverride None
-          Require all granted
-      </Directory>
-      EOL
+      cat > /etc/httpd/conf.d/shared.conf <<EOL
+DocumentRoot "/shared"
+<Directory "/shared">
+    Options Indexes FollowSymLinks
+    AllowOverride None
+    Require all granted
+</Directory>
+EOL
       
       # Ajustar permisos
       echo "=== Ajustando permisos ==="
-      chown -R apache:apache /sharedfs
-      chmod -R 755 /sharedfs
+      chown -R apache:apache /shared
+      chmod -R 755 /shared
       
       # Configurar firewall
       echo "=== Configurando firewall ==="
@@ -141,10 +141,10 @@ resource "oci_core_instance" "FoggyKitchenWebserver1" {
       
       # Verificar configuración
       echo "=== Verificando configuración ==="
-      curl -v http://localhost/shared/health.html
-      df -h | grep sharedfs
-      mount | grep sharedfs
-      ls -la /sharedfs
+      curl -v http://localhost/health.html
+      df -h | grep shared
+      mount | grep shared
+      ls -la /shared
       
       echo "=== Configuración completada ==="
     EOF
@@ -197,8 +197,8 @@ resource "oci_core_instance" "FoggyKitchenWebserver2" {
       
       # Crear y configurar directorio compartido
       echo "=== Configurando directorio compartido ==="
-      mkdir -p /sharedfs
-      chmod 777 /sharedfs
+      mkdir -p /shared
+      chmod 777 /shared
       
       # Esperar a que el mount target esté disponible
       echo "=== Esperando al mount target ==="
@@ -212,48 +212,48 @@ resource "oci_core_instance" "FoggyKitchenWebserver2" {
       mount_attempts=0
       max_mount_attempts=10
       
-      until mount -t nfs -o rw,bg,hard,nointr,rsize=1048576,wsize=1048576,tcp,actimeo=0,vers=3 ${var.MountTargetIPAddress}:/sharedfs /sharedfs || [ $mount_attempts -eq $max_mount_attempts ]; do
+      until mount -t nfs -o rw,bg,hard,nointr,rsize=1048576,wsize=1048576,tcp,actimeo=0,vers=3 ${var.MountTargetIPAddress}:/shared /shared || [ $mount_attempts -eq $max_mount_attempts ]; do
         mount_attempts=$((mount_attempts+1))
         echo "Intento $mount_attempts de $max_mount_attempts para montar NFS"
         sleep 30
       done
       
       # Verificar montaje
-      if ! mount | grep -q "/sharedfs"; then
+      if ! mount | grep -q "/shared"; then
         echo "ERROR: Fallo al montar el FSS después de $max_mount_attempts intentos"
         exit 1
       fi
       
       # Configurar fstab
       echo "=== Configurando fstab ==="
-      echo "${var.MountTargetIPAddress}:/sharedfs /sharedfs nfs rw,bg,hard,nointr,rsize=1048576,wsize=1048576,tcp,actimeo=0,vers=3 0 0" >> /etc/fstab
+      echo "${var.MountTargetIPAddress}:/shared /shared nfs rw,bg,hard,nointr,rsize=1048576,wsize=1048576,tcp,actimeo=0,vers=3 0 0" >> /etc/fstab
       
       # Configurar SELinux
       echo "=== Configurando SELinux ==="
       setsebool -P httpd_use_nfs 1
-      semanage fcontext -a -t httpd_sys_content_t "/sharedfs(/.*)?"
-      restorecon -Rv /sharedfs
+      semanage fcontext -a -t httpd_sys_content_t "/shared(/.*)?"
+      restorecon -Rv /shared
       
       # Crear archivos web
       echo "=== Creando archivos web ==="
-      echo "<html><body>OK</body></html>" > /sharedfs/health.html
-      echo "<html><body>Welcome to Shared Web Server</body></html>" > /sharedfs/index.html
+      echo "<html><body>OK</body></html>" > /shared/health.html
+      echo "<html><body>Welcome to Shared Web Server</body></html>" > /shared/index.html
       
       # Configurar Apache
       echo "=== Configurando Apache ==="
-      cat > /etc/httpd/conf.d/sharedfs.conf <<EOL
-      Alias "/shared" "/sharedfs"
-      <Directory "/sharedfs">
-          Options Indexes FollowSymLinks
-          AllowOverride None
-          Require all granted
-      </Directory>
-      EOL
+      cat > /etc/httpd/conf.d/shared.conf <<EOL
+DocumentRoot "/shared"
+<Directory "/shared">
+    Options Indexes FollowSymLinks
+    AllowOverride None
+    Require all granted
+</Directory>
+EOL
       
       # Ajustar permisos
       echo "=== Ajustando permisos ==="
-      chown -R apache:apache /sharedfs
-      chmod -R 755 /sharedfs
+      chown -R apache:apache /shared
+      chmod -R 755 /shared
       
       # Configurar firewall
       echo "=== Configurando firewall ==="
@@ -271,10 +271,10 @@ resource "oci_core_instance" "FoggyKitchenWebserver2" {
       
       # Verificar configuración
       echo "=== Verificando configuración ==="
-      curl -v http://localhost/shared/health.html
-      df -h | grep sharedfs
-      mount | grep sharedfs
-      ls -la /sharedfs
+      curl -v http://localhost/health.html
+      df -h | grep shared
+      mount | grep shared
+      ls -la /shared
       
       echo "=== Configuración completada ==="
     EOF
