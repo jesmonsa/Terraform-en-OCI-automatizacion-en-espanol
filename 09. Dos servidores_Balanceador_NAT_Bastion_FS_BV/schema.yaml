@@ -1,9 +1,9 @@
 # Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-title: "LESSON 6 - Local Block Volume"
-description: "FoggyKitchen Terraform OCI Course - LESSON 6 - Local Block Volume."
-stackDescription: "FoggyKitchen Terraform OCI Course - LESSON 6 - Local Block Volume."
+title: "Local Block Volume"
+description: "produccion Terraform OCI Course - Local Block Volume."
+stackDescription: "produccion Terraform OCI Course - Local Block Volume."
 schemaVersion: 1.1.0
 version: "20201028"
 locale: "en"
@@ -312,19 +312,19 @@ outputs:
     type: string
     visible: true
   
-  FoggyKitchenWebserver1PrivateIP:
+  produccionWebserver1PrivateIP:
     title: "Webserver1 Private IP"
     displayText: "Webserver1 Private IP"
     type: copyableString
     visible: true
 
-  FoggyKitchenWebserver2PrivateIP:
+  produccionWebserver2PrivateIP:
     title: "Webserver2 Private IP"
     displayText: "Webserver2 Private IP"
     type: copyableString
     visible: true
 
-  FoggyKitchenPublicLoadBalancer_Public_IP:
+  produccionPublicLoadBalancer_Public_IP:
     title: "LoadBalancer Public IP"
     displayText: "LoadBalancer Public IP"
     type: copyableString

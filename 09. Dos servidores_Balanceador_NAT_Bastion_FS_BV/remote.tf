@@ -1,29 +1,29 @@
 # Setup FSS on Webserver1
 
-resource "null_resource" "FoggyKitchenWebserver1SharedFilesystem" {
-  depends_on = [oci_core_instance.FoggyKitchenWebserver1, oci_core_instance.FoggyKitchenBastionServer, oci_file_storage_export.FoggyKitchenExport]
+resource "null_resource" "produccionWebserver1SharedFilesystem" {
+  depends_on = [oci_core_instance.produccionWebserver1, oci_core_instance.produccionBastionServer, oci_file_storage_export.produccionExport]
 
   provisioner "remote-exec" {
     connection {
       type                = "ssh"
       user                = "opc"
-      host                = data.oci_core_vnic.FoggyKitchenWebserver1_VNIC1.private_ip_address
+      host                = data.oci_core_vnic.produccionWebserver1_VNIC1.private_ip_address
       private_key         = tls_private_key.public_private_key_pair.private_key_pem
       script_path         = "/home/opc/myssh.sh"
       agent               = false
       timeout             = "10m"
-      bastion_host        = data.oci_core_vnic.FoggyKitchenBastionServer_VNIC1.public_ip_address
+      bastion_host        = data.oci_core_vnic.produccionBastionServer_VNIC1.public_ip_address
       bastion_port        = "22"
       bastion_user        = "opc"
       bastion_private_key = tls_private_key.public_private_key_pair.private_key_pem
     }
     inline = [
-      "echo '== Start of null_resource.FoggyKitchenWebserver1SharedFilesystem'",
+      "echo '== Start of null_resource.produccionWebserver1SharedFilesystem'",
       "sudo /bin/su -c \"dnf install -y -q nfs-utils\"",
       "sudo /bin/su -c \"mkdir -p /sharedfs\"",
       "sudo /bin/su -c \"echo '${var.MountTargetIPAddress}:/sharedfs /sharedfs nfs rsize=8192,wsize=8192,timeo=14,intr 0 0' >> /etc/fstab\"",
       "sudo /bin/su -c \"mount /sharedfs\"",
-      "echo '== End of null_resource.FoggyKitchenWebserver1SharedFilesystem'"
+      "echo '== End of null_resource.produccionWebserver1SharedFilesystem'"
     ]
   }
 
@@ -31,30 +31,30 @@ resource "null_resource" "FoggyKitchenWebserver1SharedFilesystem" {
 
 # Setup FSS on Webserver2
 
-resource "null_resource" "FoggyKitchenWebserver2SharedFilesystem" {
-  depends_on = [oci_core_instance.FoggyKitchenWebserver2, oci_core_instance.FoggyKitchenBastionServer, oci_file_storage_export.FoggyKitchenExport]
+resource "null_resource" "produccionWebserver2SharedFilesystem" {
+  depends_on = [oci_core_instance.produccionWebserver2, oci_core_instance.produccionBastionServer, oci_file_storage_export.produccionExport]
 
   provisioner "remote-exec" {
     connection {
       type                = "ssh"
       user                = "opc"
-      host                = data.oci_core_vnic.FoggyKitchenWebserver2_VNIC1.private_ip_address
+      host                = data.oci_core_vnic.produccionWebserver2_VNIC1.private_ip_address
       private_key         = tls_private_key.public_private_key_pair.private_key_pem
       script_path         = "/home/opc/myssh.sh"
       agent               = false
       timeout             = "10m"
-      bastion_host        = data.oci_core_vnic.FoggyKitchenBastionServer_VNIC1.public_ip_address
+      bastion_host        = data.oci_core_vnic.produccionBastionServer_VNIC1.public_ip_address
       bastion_port        = "22"
       bastion_user        = "opc"
       bastion_private_key = tls_private_key.public_private_key_pair.private_key_pem
     }
     inline = [
-      "echo '== Start of null_resource.FoggyKitchenWebserver2SharedFilesystem'",
+      "echo '== Start of null_resource.produccionWebserver2SharedFilesystem'",
       "sudo /bin/su -c \"dnf install -y -q nfs-utils\"",
       "sudo /bin/su -c \"mkdir -p /sharedfs\"",
       "sudo /bin/su -c \"echo '${var.MountTargetIPAddress}:/sharedfs /sharedfs nfs rsize=8192,wsize=8192,timeo=14,intr 0 0' >> /etc/fstab\"",
       "sudo /bin/su -c \"mount /sharedfs\"",
-      "echo '== End of null_resource.FoggyKitchenWebserver2SharedFilesystem'"
+      "echo '== End of null_resource.produccionWebserver2SharedFilesystem'"
     ]
   }
 
@@ -62,18 +62,18 @@ resource "null_resource" "FoggyKitchenWebserver2SharedFilesystem" {
 
 # Software installation within WebServer1 Instance
 
-resource "null_resource" "FoggyKitchenWebserver1HTTPD" {
-  depends_on = [oci_core_instance.FoggyKitchenWebserver1, oci_core_instance.FoggyKitchenBastionServer, null_resource.FoggyKitchenWebserver1SharedFilesystem]
+resource "null_resource" "produccionWebserver1HTTPD" {
+  depends_on = [oci_core_instance.produccionWebserver1, oci_core_instance.produccionBastionServer, null_resource.produccionWebserver1SharedFilesystem]
   provisioner "remote-exec" {
     connection {
       type                = "ssh"
       user                = "opc"
-      host                = data.oci_core_vnic.FoggyKitchenWebserver1_VNIC1.private_ip_address
+      host                = data.oci_core_vnic.produccionWebserver1_VNIC1.private_ip_address
       private_key         = tls_private_key.public_private_key_pair.private_key_pem
       script_path         = "/home/opc/myssh.sh"
       agent               = false
       timeout             = "10m"
-      bastion_host        = data.oci_core_vnic.FoggyKitchenBastionServer_VNIC1.public_ip_address
+      bastion_host        = data.oci_core_vnic.produccionBastionServer_VNIC1.public_ip_address
       bastion_port        = "22"
       bastion_user        = "opc"
       bastion_private_key = tls_private_key.public_private_key_pair.private_key_pem
@@ -83,7 +83,7 @@ resource "null_resource" "FoggyKitchenWebserver1HTTPD" {
 
       "echo '== 2. Creating /sharedfs/index.html'",
       "sudo -u root touch /sharedfs/index.html",
-      "sudo /bin/su -c \"echo 'Welcome to FoggyKitchen.com! These are both WEBSERVERS under LB umbrella with shared index.html ...' > /sharedfs/index.html\"",
+      "sudo /bin/su -c \"echo 'Welcome to produccion.com! These are both WEBSERVERS under LB umbrella with shared index.html ...' > /sharedfs/index.html\"",
 
       "echo '== 3. Adding Alias and Directory sharedfs to /etc/httpd/conf/httpd.conf'",
       "sudo /bin/su -c \"echo 'Alias /shared/ /sharedfs/' >> /etc/httpd/conf/httpd.conf\"",
@@ -103,18 +103,18 @@ resource "null_resource" "FoggyKitchenWebserver1HTTPD" {
 
 # Software installation within WebServer2 Instance
 
-resource "null_resource" "FoggyKitchenWebserver2HTTPD" {
-  depends_on = [oci_core_instance.FoggyKitchenWebserver2, oci_core_instance.FoggyKitchenBastionServer, null_resource.FoggyKitchenWebserver2SharedFilesystem]
+resource "null_resource" "produccionWebserver2HTTPD" {
+  depends_on = [oci_core_instance.produccionWebserver2, oci_core_instance.produccionBastionServer, null_resource.produccionWebserver2SharedFilesystem]
   provisioner "remote-exec" {
     connection {
       type                = "ssh"
       user                = "opc"
-      host                = data.oci_core_vnic.FoggyKitchenWebserver2_VNIC1.private_ip_address
+      host                = data.oci_core_vnic.produccionWebserver2_VNIC1.private_ip_address
       private_key         = tls_private_key.public_private_key_pair.private_key_pem
       script_path         = "/home/opc/myssh.sh"
       agent               = false
       timeout             = "10m"
-      bastion_host        = data.oci_core_vnic.FoggyKitchenBastionServer_VNIC1.public_ip_address
+      bastion_host        = data.oci_core_vnic.produccionBastionServer_VNIC1.public_ip_address
       bastion_port        = "22"
       bastion_user        = "opc"
       bastion_private_key = tls_private_key.public_private_key_pair.private_key_pem
@@ -139,42 +139,36 @@ resource "null_resource" "FoggyKitchenWebserver2HTTPD" {
 }
 
 # Attachment of block volume to Webserver1
-resource "null_resource" "FoggyKitchenWebserver1_oci_iscsi_attach" {
-  depends_on = [oci_core_volume_attachment.FoggyKitchenWebserver1BlockVolume100G_attach]
+resource "null_resource" "produccionWebserver1_oci_iscsi_attach" {
+  depends_on = [oci_core_volume_attachment.produccionWebserver1BlockVolume100G_attach]
 
   provisioner "remote-exec" {
     connection {
       type                = "ssh"
       user                = "opc"
-      host                = data.oci_core_vnic.FoggyKitchenWebserver1_VNIC1.private_ip_address
+      host                = data.oci_core_vnic.produccionWebserver1_VNIC1.private_ip_address
       private_key         = tls_private_key.public_private_key_pair.private_key_pem
       script_path         = "/home/opc/myssh.sh"
       agent               = false
       timeout             = "10m"
-      bastion_host        = data.oci_core_vnic.FoggyKitchenBastionServer_VNIC1.public_ip_address
+      bastion_host        = data.oci_core_vnic.produccionBastionServer_VNIC1.public_ip_address
       bastion_port        = "22"
       bastion_user        = "opc"
       bastion_private_key = tls_private_key.public_private_key_pair.private_key_pem
     }
-
-    inline = [
-      "sudo chmod +x /home/opc/iscsiattach.sh",
-      "echo 'Starting iSCSI attachment process...'",
-      "sudo /home/opc/iscsiattach.sh 2>&1 | sudo tee /var/log/iscsiattach.log || (echo 'iSCSI attachment failed' && exit 1)",
-      "echo 'iSCSI attachment process completed'"
-    ]
+    inline = ["sudo /bin/su -c \"rm -Rf /home/opc/iscsiattach.sh\""]
   }
 
   provisioner "file" {
     connection {
       type                = "ssh"
       user                = "opc"
-      host                = data.oci_core_vnic.FoggyKitchenWebserver1_VNIC1.private_ip_address
+      host                = data.oci_core_vnic.produccionWebserver1_VNIC1.private_ip_address
       private_key         = tls_private_key.public_private_key_pair.private_key_pem
       script_path         = "/home/opc/myssh.sh"
       agent               = false
       timeout             = "10m"
-      bastion_host        = data.oci_core_vnic.FoggyKitchenBastionServer_VNIC1.public_ip_address
+      bastion_host        = data.oci_core_vnic.produccionBastionServer_VNIC1.public_ip_address
       bastion_port        = "22"
       bastion_user        = "opc"
       bastion_private_key = tls_private_key.public_private_key_pair.private_key_pem
@@ -187,12 +181,12 @@ resource "null_resource" "FoggyKitchenWebserver1_oci_iscsi_attach" {
     connection {
       type                = "ssh"
       user                = "opc"
-      host                = data.oci_core_vnic.FoggyKitchenWebserver1_VNIC1.private_ip_address
+      host                = data.oci_core_vnic.produccionWebserver1_VNIC1.private_ip_address
       private_key         = tls_private_key.public_private_key_pair.private_key_pem
       script_path         = "/home/opc/myssh.sh"
       agent               = false
       timeout             = "10m"
-      bastion_host        = data.oci_core_vnic.FoggyKitchenBastionServer_VNIC1.public_ip_address
+      bastion_host        = data.oci_core_vnic.produccionBastionServer_VNIC1.public_ip_address
       bastion_port        = "22"
       bastion_user        = "opc"
       bastion_private_key = tls_private_key.public_private_key_pair.private_key_pem
@@ -205,24 +199,24 @@ resource "null_resource" "FoggyKitchenWebserver1_oci_iscsi_attach" {
 }
 
 # Mount of attached block volume on Webserver1
-resource "null_resource" "FoggyKitchenWebserver1_oci_u01_fstab" {
-  depends_on = [null_resource.FoggyKitchenWebserver1_oci_iscsi_attach]
+resource "null_resource" "produccionWebserver1_oci_u01_fstab" {
+  depends_on = [null_resource.produccionWebserver1_oci_iscsi_attach]
 
   provisioner "remote-exec" {
     connection {
       type                = "ssh"
       user                = "opc"
-      host                = data.oci_core_vnic.FoggyKitchenWebserver1_VNIC1.private_ip_address
+      host                = data.oci_core_vnic.produccionWebserver1_VNIC1.private_ip_address
       private_key         = tls_private_key.public_private_key_pair.private_key_pem
       script_path         = "/home/opc/myssh.sh"
       agent               = false
       timeout             = "10m"
-      bastion_host        = data.oci_core_vnic.FoggyKitchenBastionServer_VNIC1.public_ip_address
+      bastion_host        = data.oci_core_vnic.produccionBastionServer_VNIC1.public_ip_address
       bastion_port        = "22"
       bastion_user        = "opc"
       bastion_private_key = tls_private_key.public_private_key_pair.private_key_pem
     }
-    inline = ["echo '== Start of null_resource.FoggyKitchenWebserver1_oci_u01_fstab'",
+    inline = ["echo '== Start of null_resource.produccionWebserver1_oci_u01_fstab'",
       "sudo -u root parted /dev/sdb --script -- mklabel gpt",
       "sudo -u root parted /dev/sdb --script -- mkpart primary ext4 0% 100%",
       "sudo -u root mkfs.ext4 -F /dev/sdb1",
@@ -230,8 +224,13 @@ resource "null_resource" "FoggyKitchenWebserver1_oci_u01_fstab" {
       "sudo -u root mount /dev/sdb1 /u01",
       "sudo /bin/su -c \"echo '/dev/sdb1              /u01  ext4    defaults,noatime,_netdev    0   0' >> /etc/fstab\"",
       "sudo -u root mount | grep sdb1",
-      "echo '== End of null_resource.FoggyKitchenWebserver1_oci_u01_fstab'",
+      "echo '== End of null_resource.produccionWebserver1_oci_u01_fstab'",
     ]
   }
 
 }
+
+
+
+
+

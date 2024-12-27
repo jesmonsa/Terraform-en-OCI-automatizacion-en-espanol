@@ -1,16 +1,16 @@
 # VCN
-resource "oci_core_virtual_network" "FoggyKitchenVCN" {
+resource "oci_core_virtual_network" "produccionVCN" {
   cidr_block     = var.VCN-CIDR
-  dns_label      = "FoggyKitchenVCN"
-  compartment_id = oci_identity_compartment.FoggyKitchenCompartment.id
-  display_name   = "FoggyKitchenVCN"
+  dns_label      = "produccionVCN"
+  compartment_id = oci_identity_compartment.produccionCompartment.id
+  display_name   = "produccionVCN"
 }
 
 # DHCP Options
-resource "oci_core_dhcp_options" "FoggyKitchenDhcpOptions1" {
-  compartment_id = oci_identity_compartment.FoggyKitchenCompartment.id
-  vcn_id         = oci_core_virtual_network.FoggyKitchenVCN.id
-  display_name   = "FoggyKitchenDHCPOptions1"
+resource "oci_core_dhcp_options" "produccionDhcpOptions1" {
+  compartment_id = oci_identity_compartment.produccionCompartment.id
+  vcn_id         = oci_core_virtual_network.produccionVCN.id
+  display_name   = "produccionDHCPOptions1"
 
   options {
     type        = "DomainNameServer"
@@ -19,60 +19,59 @@ resource "oci_core_dhcp_options" "FoggyKitchenDhcpOptions1" {
 
   options {
     type                = "SearchDomain"
-    search_domain_names = ["foggykitchen.com"]
+    search_domain_names = ["produccion.com"]
   }
 }
 
 # Internet Gateway
-resource "oci_core_internet_gateway" "FoggyKitchenInternetGateway" {
-  compartment_id = oci_identity_compartment.FoggyKitchenCompartment.id
-  display_name   = "FoggyKitchenInternetGateway"
-  vcn_id         = oci_core_virtual_network.FoggyKitchenVCN.id
+resource "oci_core_internet_gateway" "produccionInternetGateway" {
+  compartment_id = oci_identity_compartment.produccionCompartment.id
+  display_name   = "produccionInternetGateway"
+  vcn_id         = oci_core_virtual_network.produccionVCN.id
 }
 
 # Route Table for IGW
-resource "oci_core_route_table" "FoggyKitchenRouteTableViaIGW" {
-  compartment_id = oci_identity_compartment.FoggyKitchenCompartment.id
-  vcn_id         = oci_core_virtual_network.FoggyKitchenVCN.id
-  display_name   = "FoggyKitchenRouteTableViaIGW"
+resource "oci_core_route_table" "produccionRouteTableViaIGW" {
+  compartment_id = oci_identity_compartment.produccionCompartment.id
+  vcn_id         = oci_core_virtual_network.produccionVCN.id
+  display_name   = "produccionRouteTableViaIGW"
   route_rules {
     destination       = "0.0.0.0/0"
     destination_type  = "CIDR_BLOCK"
-    network_entity_id = oci_core_internet_gateway.FoggyKitchenInternetGateway.id
+    network_entity_id = oci_core_internet_gateway.produccionInternetGateway.id
   }
 }
 
 # NAT Gateway
-resource "oci_core_nat_gateway" "FoggyKitchenNATGateway" {
-  compartment_id = oci_identity_compartment.FoggyKitchenCompartment.id
-  display_name   = "FoggyKitchenNATGateway"
-  vcn_id         = oci_core_virtual_network.FoggyKitchenVCN.id
+resource "oci_core_nat_gateway" "produccionNATGateway" {
+  compartment_id = oci_identity_compartment.produccionCompartment.id
+  display_name   = "produccionNATGateway"
+  vcn_id         = oci_core_virtual_network.produccionVCN.id
 }
 
 # Route Table for NAT
-resource "oci_core_route_table" "FoggyKitchenRouteTableViaNAT" {
-  compartment_id = oci_identity_compartment.FoggyKitchenCompartment.id
-  vcn_id         = oci_core_virtual_network.FoggyKitchenVCN.id
-  display_name   = "FoggyKitchenRouteTableViaNAT"
+resource "oci_core_route_table" "produccionRouteTableViaNAT" {
+  compartment_id = oci_identity_compartment.produccionCompartment.id
+  vcn_id         = oci_core_virtual_network.produccionVCN.id
+  display_name   = "produccionRouteTableViaNAT"
   route_rules {
     destination       = "0.0.0.0/0"
     destination_type  = "CIDR_BLOCK"
-    network_entity_id = oci_core_nat_gateway.FoggyKitchenNATGateway.id
+    network_entity_id = oci_core_nat_gateway.produccionNATGateway.id
   }
 }
 
 # Security List for HTTP/HTTPS
-resource "oci_core_security_list" "FoggyKitchenWebSecurityList" {
-  compartment_id = oci_identity_compartment.FoggyKitchenCompartment.id
-  display_name   = "FoggyKitchenWebSecurityList"
-  vcn_id         = oci_core_virtual_network.FoggyKitchenVCN.id
+resource "oci_core_security_list" "produccionWebSecurityList" {
+  compartment_id = oci_identity_compartment.produccionCompartment.id
+  display_name   = "produccionWebSecurityList"
+  vcn_id         = oci_core_virtual_network.produccionVCN.id
 
   egress_security_rules {
     protocol    = "6"
     destination = "0.0.0.0/0"
   }
 
-  # Reglas para HTTP/HTTPS
   dynamic "ingress_security_rules" {
     for_each = var.webservice_ports
     content {
@@ -85,71 +84,17 @@ resource "oci_core_security_list" "FoggyKitchenWebSecurityList" {
     }
   }
 
-  # Regla para el health check del balanceador
-  ingress_security_rules {
-    protocol = "6"
-    source   = var.LBSubnet-CIDR
-    tcp_options {
-      min = 80
-      max = 80
-    }
-    description = "Health Check from Load Balancer"
-  }
-
-  # Reglas para FSS (NFS)
-  ingress_security_rules {
-    protocol = "6"
-    source   = var.WebSubnet-CIDR
-    tcp_options {
-      min = 111
-      max = 111
-    }
-    description = "NFS PortMapper TCP"
-  }
-
-  ingress_security_rules {
-    protocol = "17"
-    source   = var.WebSubnet-CIDR
-    udp_options {
-      min = 111
-      max = 111
-    }
-    description = "NFS PortMapper UDP"
-  }
-
-  ingress_security_rules {
-    protocol = "6"
-    source   = var.WebSubnet-CIDR
-    tcp_options {
-      min = 2048
-      max = 2050
-    }
-    description = "NFS TCP"
-  }
-
-  ingress_security_rules {
-    protocol = "17"
-    source   = var.WebSubnet-CIDR
-    udp_options {
-      min = 2048
-      max = 2048
-    }
-    description = "NFS UDP"
-  }
-
-  # Regla para tráfico interno del VCN
   ingress_security_rules {
     protocol = "6"
     source   = var.VCN-CIDR
-    description = "Internal VCN Traffic"
   }
 }
 
 # Security List for SSH
-resource "oci_core_security_list" "FoggyKitchenSSHSecurityList" {
-  compartment_id = oci_identity_compartment.FoggyKitchenCompartment.id
-  display_name   = "FoggyKitchenSSHSecurityList"
-  vcn_id         = oci_core_virtual_network.FoggyKitchenVCN.id
+resource "oci_core_security_list" "produccionSSHSecurityList" {
+  compartment_id = oci_identity_compartment.produccionCompartment.id
+  display_name   = "produccionSSHSecurityList"
+  vcn_id         = oci_core_virtual_network.produccionVCN.id
 
   egress_security_rules {
     protocol    = "6"
@@ -175,38 +120,42 @@ resource "oci_core_security_list" "FoggyKitchenSSHSecurityList" {
 }
 
 # WebSubnet (private)
-resource "oci_core_subnet" "FoggyKitchenWebSubnet" {
+resource "oci_core_subnet" "produccionWebSubnet" {
   cidr_block                 = var.WebSubnet-CIDR
-  display_name               = "FoggyKitchenWebSubnet"
-  dns_label                  = "FoggyKitchenN2"
-  compartment_id             = oci_identity_compartment.FoggyKitchenCompartment.id
-  vcn_id                     = oci_core_virtual_network.FoggyKitchenVCN.id
-  route_table_id             = oci_core_route_table.FoggyKitchenRouteTableViaNAT.id
-  dhcp_options_id            = oci_core_dhcp_options.FoggyKitchenDhcpOptions1.id
-  security_list_ids          = [oci_core_security_list.FoggyKitchenWebSecurityList.id, oci_core_security_list.FoggyKitchenSSHSecurityList.id]
+  display_name               = "produccionWebSubnet"
+  dns_label                  = "produccionN2"
+  compartment_id             = oci_identity_compartment.produccionCompartment.id
+  vcn_id                     = oci_core_virtual_network.produccionVCN.id
+  route_table_id             = oci_core_route_table.produccionRouteTableViaNAT.id
+  dhcp_options_id            = oci_core_dhcp_options.produccionDhcpOptions1.id
+  security_list_ids          = [oci_core_security_list.produccionWebSecurityList.id, oci_core_security_list.produccionSSHSecurityList.id]
   prohibit_public_ip_on_vnic = true
 }
 
 # LoadBalancer Subnet (public)
-resource "oci_core_subnet" "FoggyKitchenLBSubnet" {
+resource "oci_core_subnet" "produccionLBSubnet" {
   cidr_block        = var.LBSubnet-CIDR
-  display_name      = "FoggyKitchenLBSubnet"
-  dns_label         = "FoggyKitchenN1"
-  compartment_id    = oci_identity_compartment.FoggyKitchenCompartment.id
-  vcn_id            = oci_core_virtual_network.FoggyKitchenVCN.id
-  route_table_id    = oci_core_route_table.FoggyKitchenRouteTableViaIGW.id
-  dhcp_options_id   = oci_core_dhcp_options.FoggyKitchenDhcpOptions1.id
-  security_list_ids = [oci_core_security_list.FoggyKitchenWebSecurityList.id]
+  display_name      = "produccionLBSubnet"
+  dns_label         = "produccionN1"
+  compartment_id    = oci_identity_compartment.produccionCompartment.id
+  vcn_id            = oci_core_virtual_network.produccionVCN.id
+  route_table_id    = oci_core_route_table.produccionRouteTableViaIGW.id
+  dhcp_options_id   = oci_core_dhcp_options.produccionDhcpOptions1.id
+  security_list_ids = [oci_core_security_list.produccionWebSecurityList.id]
 }
 
 # Bastion Subnet (public)
-resource "oci_core_subnet" "FoggyKitchenBastionSubnet" {
+resource "oci_core_subnet" "produccionBastionSubnet" {
   cidr_block        = var.BastionSubnet-CIDR
-  display_name      = "FoggyKitchenBastionSubnet"
-  dns_label         = "FoggyKitchenN3"
-  compartment_id    = oci_identity_compartment.FoggyKitchenCompartment.id
-  vcn_id            = oci_core_virtual_network.FoggyKitchenVCN.id
-  route_table_id    = oci_core_route_table.FoggyKitchenRouteTableViaIGW.id
-  dhcp_options_id   = oci_core_dhcp_options.FoggyKitchenDhcpOptions1.id
-  security_list_ids = [oci_core_security_list.FoggyKitchenSSHSecurityList.id]
+  display_name      = "produccionBastionSubnet"
+  dns_label         = "produccionN3"
+  compartment_id    = oci_identity_compartment.produccionCompartment.id
+  vcn_id            = oci_core_virtual_network.produccionVCN.id
+  route_table_id    = oci_core_route_table.produccionRouteTableViaIGW.id
+  dhcp_options_id   = oci_core_dhcp_options.produccionDhcpOptions1.id
+  security_list_ids = [oci_core_security_list.produccionSSHSecurityList.id]
 }
+
+
+
+
