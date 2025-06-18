@@ -1,45 +1,81 @@
-# Terraform en OCI
+# 🚀 Terraform en OCI - Servidor Web Único
 
-## Despliegue de un Servidor Web Único
+![Arquitectura del Servidor Web Único](Servidor%20unico.png)
 
-Desplegaremos un conjunto básico de recursos en Oracle Cloud Infrastructure (OCI). El objetivo es crear un entorno simple que incluya un compartimento, una Red de Nube Virtual (VCN) y una subred pública regional. Dentro de esta subred, se desplegará una máquina virtual (VM) que funcionará como servidor web.
+## 📋 Descripción
 
-![](Servidor%20unico.png)
+Este proyecto implementa un servidor web único en Oracle Cloud Infrastructure (OCI) utilizando Terraform. La infraestructura desplegada crea un entorno completo que incluye redes, seguridad y computación, todo configurado automáticamente.
 
-### Recursos a Desplegar
+## 🏗️ Arquitectura
 
-1. **Compartimento**: Un compartimento para organizar y gestionar los recursos.
-2. **VCN (Virtual Cloud Network)**: Una red de nube virtual que proporciona conectividad para los recursos.
-3. **Subred Pública Regional**: Una subred que abarca todos los dominios de disponibilidad (AD1-AD3) y permite la asignación de IPs públicas.
-4. **Puerta de Enlace a Internet (Internet Gateway)**: Permite la conectividad de la subred pública a Internet.
-5. **Tabla de Rutas**: Define las rutas para el tráfico de red, incluyendo una ruta hacia la puerta de enlace a Internet.
-6. **Lista de Seguridad**: Reglas de firewall que permiten el acceso SSH (puerto 22) y HTTP/HTTPS (puertos 80, 443) desde Internet.
-7. **Máquina Virtual (VM)**: Una instancia de VM que actuará como servidor web, con una IP pública asignada.
-8. **Proveedor Nulo de Terraform**: Utilizado para la provisión de software, instalando un servidor HTTP y contenido web básico.
+El despliegue crea los siguientes componentes en OCI:
 
-### Despliegue Usando Oracle Resource Manager
+| Componente | Descripción |
+|-----------|-------------|
+| **Compartimento** | Contenedor lógico para organizar y aislar recursos |
+| **VCN** | Red virtual con CIDR `10.0.0.0/16` |
+| **Subred Pública** | Subred con CIDR `10.0.1.0/24` accesible desde Internet |
+| **Internet Gateway** | Permite la conectividad saliente a Internet |
+| **Tabla de Rutas** | Configura el tráfico de red hacia Internet |
+| **Lista de Seguridad** | Permite tráfico en puertos 22 (SSH), 80 (HTTP) y 443 (HTTPS) |
+| **Instancia Compute** | VM.Standard.E5.Flex con Oracle Linux 8 |
+| **Servidor Web** | Apache HTTPD instalado y configurado automáticamente |
 
-1. Haga clic en el siguiente botón para desplegar el stack en Oracle Cloud:
+## 🔧 Requisitos Previos
 
-    [![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?region=home&zipUrl=https://github.com/nuevo-repo/foggykitchen_tf_oci_course/releases/latest/download/LESSON1_single_webserver.zip)
+- Cuenta en Oracle Cloud Infrastructure
+- Permisos adecuados para crear recursos
+- Conocimientos básicos de Terraform y OCI
 
-    > **Nota**: Si aún no ha iniciado sesión, cuando se le solicite, ingrese las credenciales de tenencia y usuario.
+## 🚀 Instrucciones de Despliegue
 
-2. Revise y acepte los términos y condiciones.
+### Opción 1: Despliegue Local
 
-3. Seleccione la región donde desea desplegar el stack.
+1. Clone este repositorio
+2. Configure sus credenciales de OCI
+3. Ejecute:
+   ```bash
+   terraform init
+   terraform plan
+   terraform apply
+   ```
 
-4. Siga las indicaciones e instrucciones en pantalla para crear el stack.
+### Opción 2: Oracle Resource Manager
 
-5. Después de crear el stack, haga clic en **Terraform Actions**, y seleccione **Plan**.
+1. Haga clic en el botón para desplegar:
 
-6. Espere a que el trabajo se complete y revise el plan.
+   [![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?region=home&zipUrl=https://github.com/nuevo-repo/foggykitchen_tf_oci_course/releases/latest/download/LESSON1_single_webserver.zip)
 
-    > **Nota**: Para realizar cualquier cambio, regrese a la página de Detalles del Stack, haga clic en **Edit Stack**, y realice los cambios necesarios. Luego, ejecute nuevamente la acción **Plan**.
+2. Siga el asistente de configuración:
+   - Inicie sesión con sus credenciales de OCI
+   - Acepte los términos y condiciones
+   - Seleccione la región de despliegue
+   - Configure las variables según sea necesario
 
-7. Si no son necesarios más cambios, regrese a la página de Detalles del Stack, haga clic en **Terraform Actions**, y seleccione **Apply**.
+3. Ejecute el plan y aplique los cambios:
+   - Haga clic en **Terraform Actions** → **Plan**
+   - Revise los cambios propuestos
+   - Haga clic en **Terraform Actions** → **Apply**
 
-### Recursos Adicionales
+## 📊 Resultados
+
+Al finalizar el despliegue, obtendrá:
+
+- Una dirección IP pública para acceder al servidor web
+- Una clave SSH privada generada para conectarse a la instancia
+- Un servidor web básico con una página de bienvenida
+
+## 📚 Recursos Adicionales
 
 - [Documentación de Terraform](https://www.terraform.io/docs)
 - [Documentación de Oracle Cloud Infrastructure](https://docs.oracle.com/iaas/Content/home.htm)
+- [Guía de Terraform para OCI](https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/terraform.htm)
+
+## 🔄 Variables Personalizables
+
+Este proyecto permite personalizar varios aspectos mediante variables en `variables.tf`:
+
+- Forma de la instancia y recursos de computación
+- CIDRs de red
+- Versión del sistema operativo
+- Puertos de servicio permitidos
