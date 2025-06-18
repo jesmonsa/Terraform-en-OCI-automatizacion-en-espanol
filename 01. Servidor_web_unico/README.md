@@ -1,81 +1,159 @@
-# 🚀 Terraform en OCI - Servidor Web Único
+# 🌐 Arquitectura - Servidor Web Único en OCI
 
-![Arquitectura del Servidor Web Único](Servidor%20unico.png)
+*Patrón básico de servidor web en Oracle Cloud Infrastructure*
 
-## 📋 Descripción
+[![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?region=home&zipUrl=https://github.com/jesmonsa/Terraform-en-OCI-automatizacion-en-espanol/archive/refs/heads/master.zip)
 
-Este proyecto implementa un servidor web único en Oracle Cloud Infrastructure (OCI) utilizando Terraform. La infraestructura desplegada crea un entorno completo que incluye redes, seguridad y computación, todo configurado automáticamente.
+## 📋 Descripción de la Arquitectura
 
-## 🏗️ Arquitectura
+Esta arquitectura implementa un servidor web único en OCI con los siguientes componentes:
 
-El despliegue crea los siguientes componentes en OCI:
+- ✅ **1 Compartimento** - Para organizar los recursos
+- ✅ **1 VCN** - Red virtual con CIDR `10.0.0.0/16`
+- ✅ **1 Subred Pública** - Con CIDR `10.0.1.0/24`
+- ✅ **1 VM WebServer** - Con Oracle Linux 8
+- ✅ **Internet Gateway** - Para conectividad a Internet
+- ✅ **Security List** - Reglas para puertos 22 (SSH), 80 (HTTP) y 443 (HTTPS)
 
-| Componente | Descripción |
-|-----------|-------------|
-| **Compartimento** | Contenedor lógico para organizar y aislar recursos |
-| **VCN** | Red virtual con CIDR `10.0.0.0/16` |
-| **Subred Pública** | Subred con CIDR `10.0.1.0/24` accesible desde Internet |
-| **Internet Gateway** | Permite la conectividad saliente a Internet |
-| **Tabla de Rutas** | Configura el tráfico de red hacia Internet |
-| **Lista de Seguridad** | Permite tráfico en puertos 22 (SSH), 80 (HTTP) y 443 (HTTPS) |
-| **Instancia Compute** | VM.Standard.E5.Flex con Oracle Linux 8 |
-| **Servidor Web** | Apache HTTPD instalado y configurado automáticamente |
+### 🎯 **Casos de Uso Ideales:**
+- 🧪 **Entornos de desarrollo** - Configuración rápida
+- 📚 **Aprendizaje** - Introducción a OCI
+- 🚀 **Pruebas de concepto** - Validación de ideas
 
-## 🔧 Requisitos Previos
+## 🏗️ Diagrama de Arquitectura
 
-- Cuenta en Oracle Cloud Infrastructure
-- Permisos adecuados para crear recursos
-- Conocimientos básicos de Terraform y OCI
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Internet                                 │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────────┐
+│                VCN (10.0.0.0/16)                            │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │              Internet Gateway                           │ │
+│  └─────────────────────┬───────────────────────────────────┘ │
+│                        │                                     │
+│  ┌─────────────────────▼───────────────────────────────────┐ │
+│  │          Subred Pública (10.0.1.0/24)                   │ │
+│  │                                                         │ │
+│  │     ┌─────────────────────────────────────────────┐     │ │
+│  │     │           WebServer VM                      │     │ │
+│  │     │        - Oracle Linux 8                     │     │ │
+│  │     │        - Apache HTTPD                       │     │ │
+│  │     │        - Puertos: 22, 80, 443               │     │ │
+│  │     └─────────────────────────────────────────────┘     │ │
+│  └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
 
-## 🚀 Instrucciones de Despliegue
+## ⚡ Despliegue Rápido
 
-### Opción 1: Despliegue Local
+### Opción 1: Usando Oracle Resource Manager
 
-1. Clone este repositorio
-2. Configure sus credenciales de OCI
-3. Ejecute:
-   ```bash
-   terraform init
-   terraform plan
-   terraform apply
-   ```
+1. **Click en "Deploy to Oracle Cloud"** arriba
+2. **Inicia sesión** en tu tenancy OCI
+3. **Revisa y acepta** términos y condiciones  
+4. **Selecciona la región** de despliegue
+5. **Click en "Plan"** para revisar los recursos
+6. **Click en "Apply"** para crear la infraestructura
 
-### Opción 2: Oracle Resource Manager
+### Opción 2: Terraform Local
 
-1. Haga clic en el botón para desplegar:
+```bash
+# 1. Clonar y navegar
+git clone https://github.com/jesmonsa/Terraform-en-OCI-automatizacion-en-espanol.git
+cd Terraform-en-OCI-automatizacion-en-espanol/01.\ Servidor_web_unico/
 
-   [![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?region=home&zipUrl=https://github.com/nuevo-repo/foggykitchen_tf_oci_course/releases/latest/download/LESSON1_single_webserver.zip)
+# 2. Configurar variables
+cp terraform.tfvars.example terraform.tfvars
+# Editar terraform.tfvars con tus credenciales
 
-2. Siga el asistente de configuración:
-   - Inicie sesión con sus credenciales de OCI
-   - Acepte los términos y condiciones
-   - Seleccione la región de despliegue
-   - Configure las variables según sea necesario
+# 3. Inicializar y desplegar
+terraform init
+terraform plan
+terraform apply
+```
 
-3. Ejecute el plan y aplique los cambios:
-   - Haga clic en **Terraform Actions** → **Plan**
-   - Revise los cambios propuestos
-   - Haga clic en **Terraform Actions** → **Apply**
+## 🔐 Configuración de Variables
 
-## 📊 Resultados
+### Archivo terraform.tfvars
+```hcl
+tenancy_ocid     = "ocid1.tenancy.oc1..aaaaaaaXXXXXX"
+user_ocid        = "ocid1.user.oc1..aaaaaaaXXXXXX"
+fingerprint      = "xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx"
+private_key_path = "/ruta/a/tu/llave/privada.pem"
+region           = "us-ashburn-1"  # Cambia según tu región
+```
 
-Al finalizar el despliegue, obtendrá:
+## 🚀 Comandos Básicos
 
-- Una dirección IP pública para acceder al servidor web
-- Una clave SSH privada generada para conectarse a la instancia
-- Un servidor web básico con una página de bienvenida
+```bash
+# Inicializar
+terraform init
 
-## 📚 Recursos Adicionales
+# Ver plan
+terraform plan
 
-- [Documentación de Terraform](https://www.terraform.io/docs)
-- [Documentación de Oracle Cloud Infrastructure](https://docs.oracle.com/iaas/Content/home.htm)
-- [Guía de Terraform para OCI](https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/terraform.htm)
+# Aplicar cambios
+terraform apply
 
-## 🔄 Variables Personalizables
+# Destruir recursos
+terraform destroy
+```
 
-Este proyecto permite personalizar varios aspectos mediante variables en `variables.tf`:
+## ✅ Validación del Despliegue
 
-- Forma de la instancia y recursos de computación
-- CIDRs de red
-- Versión del sistema operativo
-- Puertos de servicio permitidos
+### Verificar en OCI Console:
+- ✅ Compartimento creado
+- ✅ VCN desplegada
+- ✅ VM en estado "Running"
+- ✅ IP pública asignada
+
+### Probar conectividad:
+```bash
+# SSH a la VM
+ssh -i /ruta/a/tu/llave/privada opc@IP_PUBLICA
+
+# Verificar servicio web
+curl http://IP_PUBLICA
+```
+
+## 📊 Recursos Creados
+
+| Recurso | Tipo | Descripción |
+|---------|------|-------------|
+| Compartimento | `oci_identity_compartment` | Contenedor lógico |
+| VCN | `oci_core_vcn` | Red virtual (10.0.0.0/16) |
+| Internet Gateway | `oci_core_internet_gateway` | Conectividad Internet |
+| Route Table | `oci_core_route_table` | Tabla de enrutamiento |
+| Security List | `oci_core_security_list` | Reglas de firewall |
+| Subred | `oci_core_subnet` | Subred (10.0.1.0/24) |
+| Compute Instance | `oci_core_instance` | VM con Oracle Linux 8 |
+| Configuración Web | `null_resource` | Instalación de Apache HTTPD |
+
+## 💰 Estimación de Costos
+
+### Con OCI Free Tier:
+- ✅ **$0/mes** - Eligible para Always Free
+- ✅ **2 VMs ARM Ampere** incluidas
+- ✅ **Networking básico** gratuito
+
+### Con recursos pagos:
+- 💵 **~$15-30/mes** - VM Standard (1-2 OCPUs)
+- 💵 **~$1-5/mes** - Networking y almacenamiento
+
+## 🛡️ Consideraciones de Seguridad
+
+### ⚠️ **Limitaciones:**
+- 🔓 **VM en subred pública** - Expuesta a Internet
+- 🔓 **Sin NAT Gateway** - Conectividad directa
+
+### 🛡️ **Mejoras recomendadas:**
+- 🔐 **Network Security Groups** - Para seguridad granular
+- 🌐 **WAF** - Protección adicional para tráfico web
+
+---
+
+<div align="center">
+**Creado por [Tu Nombre](https://github.com/tuusuario) • Basado en [FoggyKitchen](https://github.com/mlinxfeld/foggykitchen_tf_oci_course)**
+</div>
